@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@react-navigation/drawer": "^7.14.2",
+    "react-native-gesture-handler": "^3.3.0",
+    "react-native-reanimated": "^4.7.0"
+  }
+}

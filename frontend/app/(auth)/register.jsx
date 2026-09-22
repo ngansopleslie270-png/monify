@@ -1,0 +1,566 @@
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Colors from '../../constants/Colors';
+
+export default function RegisterScreen() {
+  const router = useRouter();
+  const [nom, setNom] = useState('');
+  const [commerce, setCommerce] = useState('');
+  const [email, setEmail] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+
+  // Remplace localhost par l'IP de ton ordinateur
+  const API_URL = 'http://10.175.14.80:5000/api'; 
+
+  const handleRegister = async () => {
+    if (!nom.trim() || !commerce.trim() || !email.trim() || !telephone.trim() || !password.trim()) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires.');
+      return;
+    }
+    if (!acceptTerms) {
+      Alert.alert('Erreur', 'Veuillez accepter les conditions de confidentialité.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/auth/register`, {
+        nom,
+        email,
+        motDePasse: password
+      });
+
+      if (response.data.token) {
+        await AsyncStorage.setItem('token', response.data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(response.data.utilisateur));
+        Alert.alert('Succès', 'Inscription réussie !');
+        router.replace('/(tabs)');
+      }
+    } catch (error) {
+      console.error(error);
+      const message = error.response?.data?.message || 'Erreur lors de l\'inscription';
+      Alert.alert('Erreur', message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          
+          <Text style={styles.topText}>L'allié financier de votre commerce</Text>
+          
+          {/* Logo Header */}
+          <View style={styles.logoHeader}>
+            <View style={styles.themeLine}>
+              <View style={[styles.themeSegment, { backgroundColor: Colors.income }]} />
+              <View style={[styles.themeSegment, { backgroundColor: Colors.primary }]} />
+              <View style={[styles.themeSegment, { backgroundColor: Colors.expense }]} />
+            </View>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+          
+          <Text style={styles.mainTitle}>Créez votre compte Monify</Text>
+          <Text style={styles.mainSubtitle}>Suivez votre caisse, vos ventes et vos crédits clients simplement au quotidien.</Text>
+
+          {/* Form Card */}
+          <View style={styles.formCard}>
+            
+            {/* Profile Photo Section */}
+            <View style={styles.photoSection}>
+              <View style={styles.photoWrapper}>
+                <Image 
+                  source={{ uri: 'https://i.pravatar.cc/150?img=47' }} 
+                  style={styles.profileImage}
+                />
+                <View style={styles.cameraBadge}>
+                  <Feather name="camera" size={14} color={Colors.surface} />
+                </View>
+              </View>
+              <Text style={styles.photoLabel}>Photo de profil <Text style={styles.photoSubLabel}>(facultatif)</Text></Text>
+              <TouchableOpacity style={styles.photoButton}>
+                <Feather name="upload" size={16} color={Colors.primary} />
+                <Text style={styles.photoButtonText}>Ajouter une photo</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Inputs */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nom complet <Text style={styles.asterisk}>*</Text></Text>
+              <View style={styles.inputContainer}>
+                <Feather name="user" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Amina Kamga"
+                  value={nom}
+                  onChangeText={setNom}
+                  placeholderTextColor={Colors.textSecondary}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nom du commerce <Text style={styles.asterisk}>*</Text></Text>
+              <View style={styles.inputContainer}>
+                <MaterialCommunityIcons name="storefront" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Ex: Épicerie Moderne, Prêt-à-porter..."
+                  value={commerce}
+                  onChangeText={setCommerce}
+                  placeholderTextColor={Colors.textSecondary}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Type d'activité <Text style={styles.asterisk}>*</Text></Text>
+              <View style={styles.inputContainer}>
+                <Feather name="grid" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Sélectionner votre activité..."
+                  placeholderTextColor={Colors.textSecondary}
+                  editable={false} // Will act as a select dropdown later
+                />
+                <Feather name="chevron-down" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Adresse e-mail <Text style={styles.asterisk}>*</Text></Text>
+              <View style={styles.inputContainer}>
+                <Feather name="mail" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="votre.boutique@gmail.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholderTextColor={Colors.textSecondary}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Numéro de téléphone <Text style={styles.asterisk}>*</Text></Text>
+              <View style={styles.phoneRow}>
+                <View style={styles.phonePrefix}>
+                  <Text style={styles.phonePrefixText}>CM +237</Text>
+                </View>
+                <View style={[styles.inputContainer, {flex: 1, marginLeft: 10}]}>
+                  <Feather name="smartphone" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="6XX XXX XXX"
+                    value={telephone}
+                    onChangeText={setTelephone}
+                    keyboardType="phone-pad"
+                    placeholderTextColor={Colors.textSecondary}
+                  />
+                </View>
+              </View>
+              <Text style={styles.inputHint}>Utile pour l'encaissement mobile et les alertes de caisse.</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Mot de passe <Text style={styles.asterisk}>*</Text></Text>
+              <View style={styles.inputContainer}>
+                <Feather name="lock" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor={Colors.textSecondary}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                  <Feather name={showPassword ? "eye" : "eye-off"} size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirmer le mot de passe <Text style={styles.asterisk}>*</Text></Text>
+              <View style={styles.inputContainer}>
+                <Feather name="shield" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••••••"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  placeholderTextColor={Colors.textSecondary}
+                />
+                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                  <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.checkboxRow} onPress={() => setAcceptTerms(!acceptTerms)}>
+              <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+                {acceptTerms && <Feather name="check" size={14} color={Colors.surface} />}
+              </View>
+              <Text style={styles.checkboxText}>J'accepte les <Text style={styles.linkTextInline}>conditions de confidentialité</Text> et d'utilisation</Text>
+            </TouchableOpacity>
+
+            <View style={styles.securityBadge}>
+              <Feather name="check-circle" size={16} color={Colors.successText} />
+              <Text style={styles.securityBadgeText}>Gratuit et sans engagement • Vos données sont sécurisées</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.primaryButton} 
+              onPress={handleRegister}
+              disabled={loading}
+            >
+              <Text style={styles.primaryButtonText}>{loading ? 'Création...' : 'Créer mon compte'}</Text>
+              <Feather name="arrow-right" size={20} color={Colors.surface} />
+            </TouchableOpacity>
+            
+            <View style={styles.loginPromptRow}>
+              <Text style={styles.loginPrompt}>Vous avez déjà un compte ? </Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+                <Text style={styles.loginLink}>Connectez-vous</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <View style={styles.footerBadges}>
+              <View style={styles.footerBadgeItem}>
+                <Feather name="lock" size={14} color={Colors.successText} />
+                <Text style={styles.footerBadgeText}>100% Sécurisé</Text>
+              </View>
+              <View style={styles.footerBadgeItem}>
+                <MaterialCommunityIcons name="storefront-outline" size={16} color={Colors.primary} />
+                <Text style={styles.footerBadgeText}>Adapté commerces locaux</Text>
+              </View>
+            </View>
+            
+            <View style={styles.cloudSyncBadge}>
+              <Feather name="cloud" size={14} color={Colors.successText} />
+              <Text style={styles.cloudSyncText}>Sauvegarde en FCFA</Text>
+            </View>
+            <Text style={styles.footerDesc}>Optimisé pour fonctionner même avec une connexion internet instable.</Text>
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    padding: 15,
+  },
+  topText: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  logoHeader: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginBottom: 15,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  themeLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    flexDirection: 'row',
+  },
+  themeSegment: {
+    flex: 1,
+  },
+  logoImage: {
+    height: 42,
+    width: 140,
+  },
+  mainTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  mainSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  formCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#EFEFEF',
+    marginBottom: 15,
+  },
+  photoSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  photoWrapper: {
+    position: 'relative',
+    marginBottom: 10,
+  },
+  profileImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.primary,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  photoLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  photoSubLabel: {
+    fontWeight: 'normal',
+    color: Colors.textSecondary,
+  },
+  photoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(156, 82, 22, 0.3)',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  photoButtonText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  asterisk: {
+    color: Colors.primary,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    backgroundColor: '#FAFAFA',
+  },
+  inputIcon: {
+    padding: 12,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingRight: 12,
+    fontSize: 14,
+    color: Colors.text,
+  },
+  eyeIcon: {
+    padding: 12,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  phonePrefix: {
+    backgroundColor: '#FAFAFA',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    justifyContent: 'center',
+  },
+  phonePrefixText: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: Colors.text,
+  },
+  inputHint: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 6,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 15,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  checkboxText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  linkTextInline: {
+    color: Colors.expense,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  securityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    gap: 6,
+  },
+  securityBadgeText: {
+    fontSize: 11,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  primaryButton: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    borderRadius: 10,
+    gap: 8,
+    marginBottom: 20,
+  },
+  primaryButtonText: {
+    color: Colors.surface,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loginPromptRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loginPrompt: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+  },
+  loginLink: {
+    color: Colors.income,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  footer: {
+    alignItems: 'center',
+    marginBottom: 30,
+    paddingHorizontal: 20,
+  },
+  footerBadges: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 15,
+    marginBottom: 10,
+  },
+  footerBadgeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  footerBadgeText: {
+    fontSize: 12,
+    color: Colors.text,
+    fontWeight: '500',
+  },
+  cloudSyncBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  cloudSyncText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  footerDesc: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+});
