@@ -112,6 +112,7 @@ function SlideCard({ item, index, scrollX }) {
 
       {/* Title */}
       <Text style={styles.slideTitle}>{item.title}</Text>
+      <Text style={styles.slideTitle}> un test</Text>
 
       {/* Description */}
       <Text style={styles.slideDescription}>{item.description}</Text>
