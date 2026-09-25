@@ -4,9 +4,9 @@ const Utilisateur = require('../models/Utilisateur');
 
 const register = async (req, res) => {
   try {
-    const { nom, commerce, email, telephone, motDePasse } = req.body;
+    const { nom, commerce, typeActivite, email, telephone, motDePasse } = req.body;
 
-    if (!nom || !commerce || !email || !telephone || !motDePasse) {
+    if (!nom || !commerce || !typeActivite || !email || !telephone || !motDePasse) {
       return res.status(400).json({ message: 'Veuillez remplir tous les champs obligatoires.' });
     }
 
@@ -21,7 +21,7 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(motDePasse, salt);
 
     // Créer l'utilisateur
-    const userId = await Utilisateur.create(nom, commerce, telephone, email, hashedPassword, 'commerçant');
+    const userId = await Utilisateur.create(nom, commerce, typeActivite, telephone, email, hashedPassword, 'commerçant');
 
     // Générer le token JWT
     const token = jwt.sign(
@@ -33,7 +33,7 @@ const register = async (req, res) => {
     res.status(201).json({
       message: 'Utilisateur créé avec succès.',
       token,
-      utilisateur: { id: userId, nom, commerce, email, telephone, role: 'commerçant' }
+      utilisateur: { id: userId, nom, commerce, typeActivite, email, telephone, role: 'commerçant' }
     });
   } catch (error) {
     console.error('Erreur lors de l\'inscription:', error);

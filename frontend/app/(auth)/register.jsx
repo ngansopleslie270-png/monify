@@ -12,6 +12,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const [nom, setNom] = useState('');
   const [commerce, setCommerce] = useState('');
+  const [typeActivite, setTypeActivite] = useState('');
   const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +26,7 @@ export default function RegisterScreen() {
   const API_URL = 'http://10.175.14.80:5000/api'; 
 
   const handleRegister = async () => {
-    if (!nom.trim() || !commerce.trim() || !email.trim() || !telephone.trim() || !password.trim()) {
+    if (!nom.trim() || !commerce.trim() || !typeActivite.trim() || !email.trim() || !telephone.trim() || !password.trim()) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires.');
       return;
     }
@@ -43,6 +44,7 @@ export default function RegisterScreen() {
       const response = await axios.post(`${API_URL}/auth/register`, {
         nom,
         commerce,
+        typeActivite,
         email,
         telephone,
         motDePasse: password
@@ -115,11 +117,11 @@ export default function RegisterScreen() {
                 <Feather name="grid" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Sélectionner votre activité..."
+                  placeholder="Ex: Restauration, Prêt-à-porter..."
+                  value={typeActivite}
+                  onChangeText={setTypeActivite}
                   placeholderTextColor={Colors.textSecondary}
-                  editable={false} // Will act as a select dropdown later
                 />
-                <Feather name="chevron-down" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
               </View>
             </View>
 

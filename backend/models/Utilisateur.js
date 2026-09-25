@@ -1,10 +1,10 @@
 const db = require('../config/db');
 
 class Utilisateur {
-  static async create(nom, commerce, telephone, email, motDePasseHash, role = 'commerçant') {
+  static async create(nom, commerce, typeActivite, telephone, email, motDePasseHash, role = 'commerçant') {
     const [result] = await db.execute(
-      'INSERT INTO utilisateurs (nom, commerce, telephone, email, mot_de_passe, role) VALUES (?, ?, ?, ?, ?, ?)',
-      [nom, commerce, telephone, email, motDePasseHash, role]
+      'INSERT INTO utilisateurs (nom, commerce, type_activite, telephone, email, mot_de_passe, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [nom, commerce, typeActivite, telephone, email, motDePasseHash, role]
     );
     return result.insertId;
   }
@@ -27,7 +27,7 @@ class Utilisateur {
 
   static async findById(id) {
     const [rows] = await db.execute(
-      'SELECT id, nom, commerce, telephone, email, role, created_at FROM utilisateurs WHERE id = ?',
+      'SELECT id, nom, commerce, type_activite, telephone, email, role, created_at FROM utilisateurs WHERE id = ?',
       [id]
     );
     return rows[0];
@@ -35,7 +35,7 @@ class Utilisateur {
 
   static async findAll() {
     const [rows] = await db.execute(
-      'SELECT id, nom, commerce, telephone, email, role, created_at FROM utilisateurs ORDER BY created_at DESC'
+      'SELECT id, nom, commerce, type_activite, telephone, email, role, created_at FROM utilisateurs ORDER BY created_at DESC'
     );
     return rows;
   }

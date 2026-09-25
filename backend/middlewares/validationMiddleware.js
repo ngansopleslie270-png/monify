@@ -12,6 +12,7 @@ const checkValidation = (req, res, next) => {
 const validateRegister = [
   body('nom').notEmpty().withMessage('Le nom complet est requis'),
   body('commerce').notEmpty().withMessage('Le nom du commerce est requis'),
+  body('typeActivite').notEmpty().withMessage('Le type d\'activité est requis'),
   body('email').isEmail().withMessage('Adresse email invalide'),
   body('telephone').notEmpty().withMessage('Le numéro de téléphone est requis'),
   body('motDePasse').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères'),
