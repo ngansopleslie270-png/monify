@@ -40,6 +40,16 @@ class Transaction {
     return result.affectedRows;
   }
 
+  static async updateById(id, { categorie_id, type, produit_service, quantite, prix_unitaire, montant_total, mode_paiement, description }) {
+    const [result] = await db.execute(
+      `UPDATE transactions 
+       SET categorie_id = ?, type = ?, produit_service = ?, quantite = ?, prix_unitaire = ?, montant_total = ?, mode_paiement = ?, description = ?
+       WHERE id = ?`,
+      [categorie_id, type, produit_service, quantite, prix_unitaire, montant_total, mode_paiement, description, id]
+    );
+    return result.affectedRows;
+  }
+
   static async getStatsByUserId(utilisateur_id) {
     const [rows] = await db.execute(
       `SELECT type, SUM(montant_total) as total 

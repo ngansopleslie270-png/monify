@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
@@ -9,6 +9,10 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 export default function ProfileScreen() {
   const [user, setUser] = useState(null);
+  const [nom, setNom] = useState('');
+  const [email, setEmail] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const [commerce, setCommerce] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -18,9 +22,27 @@ export default function ProfileScreen() {
   const loadUser = async () => {
     try {
       const userStr = await AsyncStorage.getItem('user');
-      if (userStr) setUser(JSON.parse(userStr));
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        setUser(u);
+        setNom(u.nom || '');
+        setEmail(u.email || '');
+        setTelephone(u.telephone || '');
+        setCommerce(u.commerce || '');
+      }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const saveProfile = async () => {
+    try {
+      const updatedUser = { ...user, nom, email, telephone, commerce };
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      Alert.alert('Succès', 'Profil mis à jour avec succès');
+    } catch (e) {
+      Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
     }
   };
 
@@ -52,48 +74,70 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Header title="Profil" />
-      <View style={styles.content}>
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: user?.avatar || 'https://via.placeholder.com/150' }}
-              style={styles.avatar}
-            />
-            <TouchableOpacity style={styles.editAvatarBtn} onPress={pickImage}>
-              <Feather name="camera" size={16} color="#fff" />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              <Image
+                source={{ uri: user?.avatar || 'https://via.placeholder.com/150' }}
+                style={styles.avatar}
+              />
+              <TouchableOpacity style={styles.editAvatarBtn} onPress={pickImage}>
+                <Feather name="camera" size={16} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity onPress={pickImage}>
+              <Text style={{color: Colors.primary, fontWeight: 'bold', marginBottom: 10}}>Changer de photo</Text>
+            </TouchableOpacity>
+            {user?.role === 'administrateur' && (
+              <Text style={styles.roleBadge}>Administrateur</Text>
+            )}
+          </View>
+
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nom complet</Text>
+              <TextInput style={styles.input} value={nom} onChangeText={setNom} />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Adresse Email</Text>
+              <TextInput style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Téléphone</Text>
+              <TextInput style={styles.input} value={telephone} onChangeText={setTelephone} keyboardType="phone-pad" />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nom du commerce</Text>
+              <TextInput style={styles.input} value={commerce} onChangeText={setCommerce} />
+            </View>
+
+            <TouchableOpacity style={styles.btnPrimary} onPress={saveProfile}>
+              <Text style={styles.btnPrimaryText}>Enregistrer les modifications</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.name}>{user?.nom || 'Nom Utilisateur'}</Text>
-          <Text style={styles.email}>{user?.email || 'email@example.com'}</Text>
+
           {user?.role === 'administrateur' && (
-            <Text style={styles.roleBadge}>Administrateur</Text>
+            <TouchableOpacity 
+              style={[styles.btnPrimary, { backgroundColor: Colors.expense, marginTop: 15 }]}
+              onPress={() => router.push('/admin')}
+            >
+              <Text style={styles.btnPrimaryText}>Espace Administration</Text>
+            </TouchableOpacity>
           )}
-        </View>
 
-        <TouchableOpacity style={styles.btnPrimary} onPress={pickImage}>
-          <Text style={styles.btnPrimaryText}>Changer de photo</Text>
-        </TouchableOpacity>
-
-        {user?.role === 'administrateur' && (
           <TouchableOpacity 
-            style={[styles.btnPrimary, { backgroundColor: Colors.expense, marginTop: 15 }]}
-            onPress={() => router.push('/admin')}
+            style={[styles.btnPrimary, { backgroundColor: 'transparent', borderWidth: 1, borderColor: Colors.expense, marginTop: 30, marginBottom: 20 }]}
+            onPress={async () => {
+              await AsyncStorage.removeItem('token');
+              await AsyncStorage.removeItem('user');
+              router.replace('/(auth)/login');
+            }}
           >
-            <Text style={styles.btnPrimaryText}>Espace Administration</Text>
+            <Text style={[styles.btnPrimaryText, { color: Colors.expense }]}>Se déconnecter</Text>
           </TouchableOpacity>
-        )}
-
-        <TouchableOpacity 
-          style={[styles.btnPrimary, { backgroundColor: 'transparent', borderWidth: 1, borderColor: Colors.expense, marginTop: 30 }]}
-          onPress={async () => {
-            await AsyncStorage.removeItem('token');
-            await AsyncStorage.removeItem('user');
-            router.replace('/login');
-          }}
-        >
-          <Text style={[styles.btnPrimaryText, { color: Colors.expense }]}>Se déconnecter</Text>
-        </TouchableOpacity>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -124,7 +168,20 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   btnPrimary: {
-    backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10, width: '100%', alignItems: 'center'
+    backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 15, borderRadius: 10, width: '100%', alignItems: 'center'
   },
-  btnPrimaryText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+  btnPrimaryText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  formContainer: { width: '100%', marginBottom: 10 },
+  inputGroup: { marginBottom: 15 },
+  label: { fontSize: 13, color: Colors.textSecondary, marginBottom: 5, fontWeight: '600' },
+  input: {
+    backgroundColor: '#FAFAFA',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.text
+  }
 });

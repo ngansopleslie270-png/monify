@@ -27,14 +27,20 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // Simulation de la connexion pour permettre l'accès libre aux interfaces
-      await AsyncStorage.setItem('token', 'simulated_token_123');
-      const fakeUser = { id: 1, nom: '', email: identifier };
-      await AsyncStorage.setItem('user', JSON.stringify(fakeUser));
-      router.replace('/(tabs)');
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        identifier,
+        motDePasse: password
+      });
+
+      if (response.data.token) {
+        await AsyncStorage.setItem('token', response.data.token);
+        await AsyncStorage.setItem('user', JSON.stringify(response.data.utilisateur || response.data.user));
+        router.replace('/(tabs)');
+      }
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Erreur lors de la connexion');
+      const message = error.response?.data?.message || 'Erreur lors de la connexion';
+      Alert.alert('Erreur', message);
     } finally {
       setLoading(false);
     }
@@ -51,11 +57,6 @@ export default function LoginScreen() {
           
           {/* Logo Header */}
           <View style={styles.logoHeader}>
-            <View style={styles.themeLine}>
-              <View style={[styles.themeSegment, { backgroundColor: Colors.income }]} />
-              <View style={[styles.themeSegment, { backgroundColor: Colors.primary }]} />
-              <View style={[styles.themeSegment, { backgroundColor: Colors.expense }]} />
-            </View>
             <View style={styles.badge}>
               <MaterialCommunityIcons name="storefront" size={14} color={Colors.primary} />
               <Text style={styles.badgeText}>ESPACE COMMERÇANT</Text>
@@ -119,7 +120,7 @@ export default function LoginScreen() {
               disabled={loading}
             >
               <MaterialCommunityIcons name="cash-register" size={20} color={Colors.surface} />
-              <Text style={styles.primaryButtonText}>{loading ? 'Connexion...' : 'Se connecter à ma caisse'}</Text>
+              <Text style={styles.primaryButtonText}>{loading ? 'Connexion...' : 'Se connecter'}</Text>
               <Feather name="arrow-right" size={20} color={Colors.surface} />
             </TouchableOpacity>
           </View>
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   registerLinkTop: {
-    color: Colors.income,
+    color: Colors.primary,
     fontSize: 15,
     fontWeight: '700',
   },

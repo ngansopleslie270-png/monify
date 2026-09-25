@@ -24,6 +24,7 @@ export default function DashboardScreen() {
 
   const fetchDashboard = async () => {
     try {
+      setLoading(true);
       const token = await AsyncStorage.getItem('token');
       const userStr = await AsyncStorage.getItem('user');
       if (userStr) {

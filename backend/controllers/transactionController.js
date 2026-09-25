@@ -95,8 +95,66 @@ const deleteTransaction = async (req, res) => {
   }
 };
 
+const updateTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { categorie_id, type, produit_service, quantite, prix_unitaire, mode_paiement, description } = req.body;
+    const utilisateur_id = req.user.id;
+
+    if (!categorie_id || !type || !produit_service || !quantite || !prix_unitaire) {
+      return res.status(400).json({ message: 'Veuillez fournir toutes les informations obligatoires.' });
+    }
+
+    // Retrouver l'ancienne transaction
+    const oldTransaction = await Transaction.findById(id);
+    if (!oldTransaction) {
+      return res.status(404).json({ message: 'Transaction introuvable.' });
+    }
+
+    if (oldTransaction.utilisateur_id !== utilisateur_id) {
+      return res.status(403).json({ message: 'Non autorisé.' });
+    }
+
+    // Calcul du nouveau montant
+    const montant_total = parseFloat(quantite) * parseFloat(prix_unitaire);
+
+    // Mettre à jour le solde (opération inverse sur l'ancien montant)
+    const compte = await Compte.findByUserId(utilisateur_id);
+    const reverseType = oldTransaction.type === 'depense' ? 'revenu' : 'depense';
+    await Compte.updateSolde(compte.id, oldTransaction.montant_total, reverseType);
+
+    // Mettre à jour la transaction
+    await Transaction.updateById(id, {
+      categorie_id,
+      type,
+      produit_service,
+      quantite,
+      prix_unitaire,
+      montant_total,
+      mode_paiement: mode_paiement || 'especes',
+      description: description || ''
+    });
+
+    // Appliquer le nouveau montant sur le solde
+    await Compte.updateSolde(compte.id, montant_total, type);
+
+    // Vérifier les règles de notification de budget
+    if (type === 'depense') {
+      await notificationService.checkTransactionRules(utilisateur_id);
+    }
+
+    res.status(200).json({
+      message: 'Transaction modifiée avec succès.'
+    });
+  } catch (error) {
+    console.error('Erreur lors de la modification de la transaction:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur.' });
+  }
+};
+
 module.exports = {
   createTransaction,
   getTransactions,
-  deleteTransaction
+  deleteTransaction,
+  updateTransaction
 };

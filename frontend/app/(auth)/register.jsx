@@ -6,6 +6,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
+import Header from '../../components/Header';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -41,13 +42,15 @@ export default function RegisterScreen() {
     try {
       const response = await axios.post(`${API_URL}/auth/register`, {
         nom,
+        commerce,
         email,
+        telephone,
         motDePasse: password
       });
 
       if (response.data.token) {
         await AsyncStorage.setItem('token', response.data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.data.utilisateur));
+        await AsyncStorage.setItem('user', JSON.stringify(response.data.utilisateur || response.data.user));
         Alert.alert('Succès', 'Inscription réussie !');
         router.replace('/(tabs)');
       }
@@ -62,6 +65,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <Header />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -70,44 +74,12 @@ export default function RegisterScreen() {
           
           <Text style={styles.topText}>L'allié financier de votre commerce</Text>
           
-          {/* Logo Header */}
-          <View style={styles.logoHeader}>
-            <View style={styles.themeLine}>
-              <View style={[styles.themeSegment, { backgroundColor: Colors.income }]} />
-              <View style={[styles.themeSegment, { backgroundColor: Colors.primary }]} />
-              <View style={[styles.themeSegment, { backgroundColor: Colors.expense }]} />
-            </View>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-          </View>
-          
           <Text style={styles.mainTitle}>Créez votre compte Monify</Text>
           <Text style={styles.mainSubtitle}>Suivez votre caisse, vos ventes et vos crédits clients simplement au quotidien.</Text>
 
           {/* Form Card */}
           <View style={styles.formCard}>
             
-            {/* Profile Photo Section */}
-            <View style={styles.photoSection}>
-              <View style={styles.photoWrapper}>
-                <Image 
-                  source={{ uri: 'https://i.pravatar.cc/150?img=47' }} 
-                  style={styles.profileImage}
-                />
-                <View style={styles.cameraBadge}>
-                  <Feather name="camera" size={14} color={Colors.surface} />
-                </View>
-              </View>
-              <Text style={styles.photoLabel}>Photo de profil <Text style={styles.photoSubLabel}>(facultatif)</Text></Text>
-              <TouchableOpacity style={styles.photoButton}>
-                <Feather name="upload" size={16} color={Colors.primary} />
-                <Text style={styles.photoButtonText}>Ajouter une photo</Text>
-              </TouchableOpacity>
-            </View>
-
             {/* Inputs */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nom complet <Text style={styles.asterisk}>*</Text></Text>
@@ -231,11 +203,6 @@ export default function RegisterScreen() {
               <Text style={styles.checkboxText}>J'accepte les <Text style={styles.linkTextInline}>conditions de confidentialité</Text> et d'utilisation</Text>
             </TouchableOpacity>
 
-            <View style={styles.securityBadge}>
-              <Feather name="check-circle" size={16} color={Colors.successText} />
-              <Text style={styles.securityBadgeText}>Gratuit et sans engagement • Vos données sont sécurisées</Text>
-            </View>
-
             <TouchableOpacity 
               style={styles.primaryButton} 
               onPress={handleRegister}
@@ -251,26 +218,6 @@ export default function RegisterScreen() {
                 <Text style={styles.loginLink}>Connectez-vous</Text>
               </TouchableOpacity>
             </View>
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <View style={styles.footerBadges}>
-              <View style={styles.footerBadgeItem}>
-                <Feather name="lock" size={14} color={Colors.successText} />
-                <Text style={styles.footerBadgeText}>100% Sécurisé</Text>
-              </View>
-              <View style={styles.footerBadgeItem}>
-                <MaterialCommunityIcons name="storefront-outline" size={16} color={Colors.primary} />
-                <Text style={styles.footerBadgeText}>Adapté commerces locaux</Text>
-              </View>
-            </View>
-            
-            <View style={styles.cloudSyncBadge}>
-              <Feather name="cloud" size={14} color={Colors.successText} />
-              <Text style={styles.cloudSyncText}>Sauvegarde en FCFA</Text>
-            </View>
-            <Text style={styles.footerDesc}>Optimisé pour fonctionner même avec une connexion internet instable.</Text>
           </View>
 
         </ScrollView>

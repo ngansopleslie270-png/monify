@@ -52,6 +52,9 @@ export default function AddScreen() {
     new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
   );
 
+  const [editMode, setEditMode] = useState(false);
+  const [currentTransactionId, setCurrentTransactionId] = useState(null);
+
   const API_URL = 'http://10.175.14.80:5000/api';
 
   useEffect(() => {
@@ -88,7 +91,7 @@ export default function AddScreen() {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      await axios.post(`${API_URL}/transactions`, {
+      const payload = {
         categorie_id:   selectedCategory.id,
         type:           'revenu',
         produit_service: produit,
@@ -96,12 +99,22 @@ export default function AddScreen() {
         prix_unitaire:  prix,
         mode_paiement:  paymentMode,
         description,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      };
 
-      // Afficher le résumé après le succès
+      if (editMode && currentTransactionId) {
+        await axios.put(`${API_URL}/transactions/${currentTransactionId}`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        const response = await axios.post(`${API_URL}/transactions`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCurrentTransactionId(response.data.transactionId);
+      }
+
       setShowSummary(true);
     } catch (error) {
-      Alert.alert('Erreur', "Impossible d'enregistrer la vente.");
+      Alert.alert('Erreur', `Impossible d'enregistrer la vente. ${error.response?.data?.message || ''}`);
     } finally {
       setLoading(false);
     }
@@ -109,9 +122,38 @@ export default function AddScreen() {
   
   const handleCloseSummary = () => {
     setShowSummary(false);
+    setEditMode(false);
+    setCurrentTransactionId(null);
     setProduit(''); setPrix(''); setQuantite(1);
     setDescription(''); setSelectedCategory(null);
     router.push('/(tabs)');
+  };
+
+  const handleDelete = async () => {
+    Alert.alert('Confirmation', 'Voulez-vous vraiment annuler/supprimer cette transaction ?', [
+      { text: 'Non', style: 'cancel' },
+      { text: 'Oui, supprimer', style: 'destructive', onPress: async () => {
+        try {
+          const token = await AsyncStorage.getItem('token');
+          await axios.delete(`${API_URL}/transactions/${currentTransactionId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setShowSummary(false);
+          setEditMode(false);
+          setCurrentTransactionId(null);
+          setProduit(''); setPrix(''); setQuantite(1);
+          setDescription(''); setSelectedCategory(null);
+          Alert.alert('Succès', 'Transaction supprimée.');
+        } catch (error) {
+          Alert.alert('Erreur', 'Impossible de supprimer la transaction.');
+        }
+      }}
+    ]);
+  };
+
+  const handleEdit = () => {
+    setShowSummary(false);
+    setEditMode(true);
   };
 
   const paymentModes = [
@@ -257,9 +299,9 @@ export default function AddScreen() {
             <TextInput style={styles.textArea} placeholder="Ajouter une remarque..." placeholderTextColor="rgba(142,142,147,0.5)" multiline numberOfLines={3} value={description} onChangeText={setDescription} />
           </View>
 
-          <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.7 }]} onPress={handleSubmit} disabled={loading}>
+          <TouchableOpacity style={[styles.submitBtn, loading && { opacity: 0.7 }, editMode && { backgroundColor: Colors.income }]} onPress={handleSubmit} disabled={loading}>
             <Feather name="check-circle" size={18} color={Colors.surface} />
-            <Text style={styles.submitBtnText}>{loading ? 'Enregistrement...' : 'Enregistrer la vente'}</Text>
+            <Text style={styles.submitBtnText}>{loading ? 'Enregistrement...' : (editMode ? 'Mettre à jour la vente' : 'Enregistrer la vente')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.cancelBtn} onPress={() => router.push('/(tabs)')}>
@@ -371,8 +413,19 @@ export default function AddScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.submitBtn} onPress={handleCloseSummary}>
-              <Text style={styles.submitBtnText}>Retour au tableau de bord</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, width: '100%', gap: 10 }}>
+              <TouchableOpacity style={[styles.submitBtn, { flex: 1, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.expense }]} onPress={handleDelete}>
+                <Feather name="trash-2" size={16} color={Colors.expense} />
+                <Text style={[styles.submitBtnText, { color: Colors.expense, marginLeft: 6 }]}>Supprimer</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.submitBtn, { flex: 1, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.primary }]} onPress={handleEdit}>
+                <Feather name="edit-2" size={16} color={Colors.primary} />
+                <Text style={[styles.submitBtnText, { color: Colors.primary, marginLeft: 6 }]}>Modifier</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={[styles.submitBtn, { marginTop: 12, width: '100%' }]} onPress={handleCloseSummary}>
+              <Text style={styles.submitBtnText}>Terminer / Nouveau</Text>
             </TouchableOpacity>
           </View>
         </View>

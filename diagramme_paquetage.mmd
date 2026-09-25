@@ -1,0 +1,89 @@
+classDiagram
+    %% Définition des dépendances
+    Frontend_API_Client ..> Backend_Routes : Requêtes HTTP/REST (JSON/Audio)
+    Backend_Data_Access ..> MySQL_Database : Requêtes SQL
+    Backend_AI_Service ..> External_AI_Provider : API Call (Whisper, Gemini)
+
+    %% Frontend (Application Mobile React Native)
+    namespace Frontend_Mobile_App {
+        class UI_Pages {
+            +Dashboard
+            +Transactions
+            +Rapports
+            +AdminPanel
+        }
+        class Voice_Capture_Module {
+            +Enregistrement Audio
+            +Gestion Microphone
+            +Interface de feedback visuel
+        }
+        class State_Management {
+            +AuthContext
+            +Hooks
+        }
+        class Frontend_API_Client {
+            +Axios/Fetch
+            +Intercepteurs (Token)
+        }
+    }
+
+    %% Backend (Serveur Node.js / Express)
+    namespace Backend_NodeJS {
+        class Backend_Routes {
+            +AuthRoutes
+            +TransactionRoutes
+            +IARoutes
+        }
+        class Middlewares {
+            +Auth_JWT
+            +Role_Verification
+            +Audio_Upload_Parser
+        }
+        class Controllers {
+            +AuthController
+            +TransactionController
+            +IAController
+            +DashboardController
+        }
+        class Services {
+            +Backend_AI_Service
+            +NotificationService
+            +RapportService
+        }
+        class Models {
+            +User
+            +Transaction (Dépense/Revenu)
+            +Compte
+            +Categorie
+        }
+        class Backend_Data_Access {
+            +Configuration BDD
+            +ORM/Query Builder
+        }
+    }
+
+    %% Systèmes Externes
+    namespace External_Systems {
+        class MySQL_Database {
+            +monify_db
+        }
+        class External_AI_Provider {
+            +Speech-to-Text
+            +NLP Intent Extraction
+        }
+    }
+
+    %% Relations Internes Frontend
+    UI_Pages ..> State_Management : Utilise
+    UI_Pages ..> Voice_Capture_Module : Déclenche
+    UI_Pages ..> Frontend_API_Client : Appelle
+    Voice_Capture_Module ..> Frontend_API_Client : Envoie les données audio
+
+    %% Relations Internes Backend
+    Backend_Routes ..> Middlewares : Traverse
+    Middlewares ..> Controllers : Passe à
+    Controllers ..> Models : Manipule
+    Controllers ..> Services : Délègue la logique complexe
+    Services ..> Models : Utilise
+    Models ..> Backend_Data_Access : Persiste via
+    Services <|-- Backend_AI_Service : Implémente
