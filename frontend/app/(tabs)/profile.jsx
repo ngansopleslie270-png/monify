@@ -7,13 +7,18 @@ import Header from '../../components/Header';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import axios from 'axios';
+
 export default function ProfileScreen() {
   const [user, setUser] = useState(null);
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
   const [commerce, setCommerce] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
+
+  const API_URL = 'http://10.175.14.80:5000/api';
 
   useEffect(() => {
     loadUser();
@@ -37,11 +42,22 @@ export default function ProfileScreen() {
 
   const saveProfile = async () => {
     try {
-      const updatedUser = { ...user, nom, email, telephone, commerce };
+      const token = await AsyncStorage.getItem('token');
+      // Mettre à jour le backend
+      const response = await axios.put(`${API_URL}/auth/profile`, {
+        nom, commerce, telephone
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Mettre à jour le stockage local
+      const updatedUser = { ...user, ...response.data.utilisateur };
       await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
       setUser(updatedUser);
+      setIsEditing(false);
       Alert.alert('Succès', 'Profil mis à jour avec succès');
     } catch (e) {
+      console.error(e);
       Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
     }
   };
@@ -97,24 +113,37 @@ export default function ProfileScreen() {
           <View style={styles.formContainer}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nom complet</Text>
-              <TextInput style={styles.input} value={nom} onChangeText={setNom} />
+              <TextInput style={[styles.input, !isEditing && styles.inputDisabled]} value={nom} onChangeText={setNom} editable={isEditing} />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Adresse Email</Text>
-              <TextInput style={styles.input} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+              <TextInput style={[styles.input, styles.inputDisabled]} value={email} editable={false} keyboardType="email-address" autoCapitalize="none" />
+              <Text style={styles.helpText}>L'email ne peut pas être modifié.</Text>
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Téléphone</Text>
-              <TextInput style={styles.input} value={telephone} onChangeText={setTelephone} keyboardType="phone-pad" />
+              <TextInput style={[styles.input, !isEditing && styles.inputDisabled]} value={telephone} onChangeText={setTelephone} editable={isEditing} keyboardType="phone-pad" />
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nom du commerce</Text>
-              <TextInput style={styles.input} value={commerce} onChangeText={setCommerce} />
+              <TextInput style={[styles.input, !isEditing && styles.inputDisabled]} value={commerce} onChangeText={setCommerce} editable={isEditing} />
             </View>
 
-            <TouchableOpacity style={styles.btnPrimary} onPress={saveProfile}>
-              <Text style={styles.btnPrimaryText}>Enregistrer les modifications</Text>
-            </TouchableOpacity>
+            {isEditing ? (
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={[styles.btnPrimary, { flex: 1, marginRight: 10 }]} onPress={saveProfile}>
+                  <Text style={styles.btnPrimaryText}>Enregistrer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.btnSecondary, { flex: 1 }]} onPress={() => { setIsEditing(false); loadUser(); }}>
+                  <Text style={[styles.btnPrimaryText, { color: Colors.primary }]}>Annuler</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.btnPrimary} onPress={() => setIsEditing(true)}>
+                <Feather name="edit-2" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.btnPrimaryText}>Modifier le profil</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {user?.role === 'administrateur' && (
@@ -183,5 +212,28 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: Colors.text
+  },
+  inputDisabled: {
+    backgroundColor: '#F0F0F0',
+    color: Colors.textSecondary
+  },
+  helpText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 4
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5
+  },
+  btnSecondary: {
+    backgroundColor: 'transparent', 
+    paddingHorizontal: 20, 
+    paddingVertical: 15, 
+    borderRadius: 10, 
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary
   }
 });

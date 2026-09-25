@@ -37,7 +37,11 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur lors de l\'inscription:', error);
-    res.status(500).json({ message: 'Erreur interne du serveur.' });
+    res.status(500).json({ 
+      message: 'Erreur SQL ou Serveur lors de l\'inscription.',
+      error: error.message,
+      sqlMessage: error.sqlMessage 
+    });
   }
 };
 
@@ -75,7 +79,11 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
-    res.status(500).json({ message: 'Erreur interne du serveur.' });
+    res.status(500).json({ 
+      message: 'Erreur SQL ou Serveur lors de la connexion.',
+      error: error.message,
+      sqlMessage: error.sqlMessage
+    });
   }
 };
 
@@ -92,8 +100,38 @@ const getProfile = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { nom, commerce, telephone } = req.body;
+
+    // Mise à jour dans la base de données
+    const success = await Utilisateur.update(userId, { nom, commerce, telephone });
+    
+    if (!success) {
+      return res.status(400).json({ message: 'Échec de la mise à jour.' });
+    }
+
+    // Récupérer le nouvel utilisateur mis à jour
+    const updatedUser = await Utilisateur.findById(userId);
+
+    res.status(200).json({
+      message: 'Profil mis à jour avec succès.',
+      utilisateur: updatedUser
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du profil:', error);
+    res.status(500).json({ 
+      message: 'Erreur serveur lors de la mise à jour.',
+      error: error.message,
+      sqlMessage: error.sqlMessage
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
-  getProfile
+  getProfile,
+  updateProfile
 };

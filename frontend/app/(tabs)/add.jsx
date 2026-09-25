@@ -36,7 +36,9 @@ export default function AddScreen() {
   const [categories, setCategories] = useState(DEMO_CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
+  const [availableStock, setAvailableStock] = useState([]);
   const [produits, setProduits] = useState([]);
   const [produit, setProduit] = useState('');
   const [showProductPicker, setShowProductPicker] = useState(false);
@@ -59,7 +61,18 @@ export default function AddScreen() {
 
   useEffect(() => {
     fetchCategories();
+    fetchStock();
   }, []);
+
+  const fetchStock = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/transactions/stock`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data) setAvailableStock(res.data);
+    } catch (_) {}
+  };
 
   const fetchCategories = async () => {
     try {
@@ -73,11 +86,43 @@ export default function AddScreen() {
     }
   };
 
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.post(`${API_URL}/categories`, {
+        nom: newCategoryName,
+        type: 'general',
+        color: '#2E7D32',
+        icon: 'tag'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const newCat = res.data.categorie;
+      setCategories([...categories, newCat]);
+      setSelectedCategory(newCat);
+      setNewCategoryName('');
+      setShowCategoryPicker(false);
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de créer la catégorie.');
+    }
+  };
+
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat);
     setShowCategoryPicker(false);
     setProduit('');
-    setProduits(DEMO_PRODUITS[cat.id] || []);
+    
+    // Obtenir uniquement les produits en stock pour cette catégorie
+    const inStock = availableStock
+      .filter(item => item.categorie_id === cat.id)
+      .map(item => item.produit_service);
+      
+    if (inStock.length > 0) {
+      setProduits(inStock);
+    } else {
+      setProduits(DEMO_PRODUITS[cat.id] || []);
+    }
   };
 
   const total = (parseInt(prix) || 0) * quantite;
@@ -93,7 +138,7 @@ export default function AddScreen() {
       const token = await AsyncStorage.getItem('token');
       const payload = {
         categorie_id:   selectedCategory.id,
-        type:           'revenu',
+        type:           'vente',
         produit_service: produit,
         quantite:       quantite.toString(),
         prix_unitaire:  prix,
@@ -323,6 +368,19 @@ export default function AddScreen() {
                 <Feather name="x" size={20} color={Colors.text} />
               </TouchableOpacity>
             </View>
+
+            <View style={styles.freeInputContainer}>
+              <TextInput 
+                style={styles.freeInput} 
+                placeholder="Créer une nouvelle catégorie..." 
+                value={newCategoryName} 
+                onChangeText={setNewCategoryName} 
+              />
+              <TouchableOpacity style={styles.freeInputBtn} onPress={handleAddCategory}>
+                <Text style={styles.freeInputBtnText}>Ajouter</Text>
+              </TouchableOpacity>
+            </View>
+
             <FlatList
               data={categories}
               keyExtractor={item => item.id.toString()}

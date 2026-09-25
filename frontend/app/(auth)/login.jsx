@@ -17,7 +17,7 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(true);
 
   // Remplace localhost par l'IP de ton ordinateur
-  const API_URL = 'http://10.175.14.80:5000/api'; 
+  const API_URL = 'http://10.175.14.80:5000/api';
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -49,12 +49,12 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <Header />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-          
+
           {/* Logo Header */}
           <View style={styles.logoHeader}>
             <View style={styles.badge}>
@@ -115,8 +115,8 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity 
-              style={styles.primaryButton} 
+            <TouchableOpacity
+              style={styles.primaryButton}
               onPress={handleLogin}
               disabled={loading}
             >

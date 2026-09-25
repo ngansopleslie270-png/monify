@@ -1,6 +1,5 @@
 const Transaction = require('../models/Transaction');
-const Compte = require('../models/Compte');
-const notificationService = require('../services/notificationService');
+// const notificationService = require('../services/notificationService');
 
 const createTransaction = async (req, res) => {
   try {
@@ -9,6 +8,16 @@ const createTransaction = async (req, res) => {
 
     if (!categorie_id || !type || !produit_service || !quantite || !prix_unitaire) {
       return res.status(400).json({ message: 'Veuillez fournir toutes les informations obligatoires.' });
+    }
+
+    // Vérification du stock si c'est une vente
+    if (type === 'vente') {
+      const stockActuel = await Transaction.getProductStock(utilisateur_id, produit_service);
+      if (stockActuel < parseFloat(quantite)) {
+        return res.status(400).json({ 
+          message: `Stock insuffisant pour '${produit_service}'. Stock actuel : ${stockActuel}, Quantité demandée : ${quantite}` 
+        });
+      }
     }
 
     const montant_total = parseFloat(quantite) * parseFloat(prix_unitaire);
@@ -26,14 +35,10 @@ const createTransaction = async (req, res) => {
       description: description || ''
     });
 
-    // Mettre à jour le solde du compte
-    const compte = await Compte.findByUserId(utilisateur_id);
-    await Compte.updateSolde(compte.id, montant_total, type);
-
     // Vérifier les règles de notification de budget (Phase 6)
-    if (type === 'depense') {
-      await notificationService.checkTransactionRules(utilisateur_id);
-    }
+    // if (type === 'depense') {
+    //   await notificationService.checkTransactionRules(utilisateur_id);
+    // }
 
     res.status(201).json({
       message: 'Transaction enregistrée avec succès.',
@@ -50,12 +55,17 @@ const getTransactions = async (req, res) => {
     const utilisateur_id = req.user.id;
     const transactions = await Transaction.findByUserId(utilisateur_id);
     
-    // On peut aussi récupérer le compte pour envoyer le solde
-    const compte = await Compte.findByUserId(utilisateur_id);
+    // Calculer le solde actuel sur la volée
+    const stats = await Transaction.getDashboardMetrics(utilisateur_id);
+    let solde = 0;
+    stats.forEach(s => {
+      if (s.type === 'vente' || s.type === 'revenu') solde += parseFloat(s.total);
+      if (s.type === 'depense' || s.type === 'achat') solde -= parseFloat(s.total);
+    });
 
     res.status(200).json({
       transactions,
-      solde: compte.solde
+      solde
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des transactions:', error);
@@ -79,14 +89,18 @@ const deleteTransaction = async (req, res) => {
       return res.status(403).json({ message: 'Non autorisé.' });
     }
 
+    // Si on supprime un achat, on vérifie que cela ne rend pas le stock négatif
+    if (transaction.type === 'achat') {
+      const stockActuel = await Transaction.getProductStock(utilisateur_id, transaction.produit_service, id);
+      if (stockActuel < 0) {
+        return res.status(400).json({ 
+          message: `Impossible de supprimer cet achat. Des ventes ont déjà été effectuées pour '${transaction.produit_service}'.` 
+        });
+      }
+    }
+
     // Supprimer la transaction
     await Transaction.deleteById(id);
-
-    // Mettre à jour le solde (opération inverse)
-    const compte = await Compte.findByUserId(utilisateur_id);
-    // Pour inverser : si c'était une dépense, on ajoute (revenu). Si c'était un revenu, on soustrait (depense).
-    const reverseType = transaction.type === 'depense' ? 'revenu' : 'depense';
-    await Compte.updateSolde(compte.id, transaction.montant_total, reverseType);
 
     res.status(200).json({ message: 'Transaction supprimée avec succès.' });
   } catch (error) {
@@ -115,13 +129,29 @@ const updateTransaction = async (req, res) => {
       return res.status(403).json({ message: 'Non autorisé.' });
     }
 
+    // Vérification du stock si c'est une vente
+    if (type === 'vente') {
+      const stockActuel = await Transaction.getProductStock(utilisateur_id, produit_service, id);
+      if (stockActuel < parseFloat(quantite)) {
+        return res.status(400).json({ 
+          message: `Stock insuffisant pour '${produit_service}'. Stock actuel : ${stockActuel}, Quantité demandée : ${quantite}` 
+        });
+      }
+    }
+
+    // Si on modifie un achat (baisse de quantité par exemple)
+    if (type === 'achat') {
+      const stockActuel = await Transaction.getProductStock(utilisateur_id, produit_service, id);
+      const stockFutur = stockActuel + parseFloat(quantite);
+      if (stockFutur < 0) {
+        return res.status(400).json({ 
+          message: `Impossible de réduire la quantité à ${quantite}. Des ventes ont déjà été effectuées et le stock deviendrait négatif.` 
+        });
+      }
+    }
+
     // Calcul du nouveau montant
     const montant_total = parseFloat(quantite) * parseFloat(prix_unitaire);
-
-    // Mettre à jour le solde (opération inverse sur l'ancien montant)
-    const compte = await Compte.findByUserId(utilisateur_id);
-    const reverseType = oldTransaction.type === 'depense' ? 'revenu' : 'depense';
-    await Compte.updateSolde(compte.id, oldTransaction.montant_total, reverseType);
 
     // Mettre à jour la transaction
     await Transaction.updateById(id, {
@@ -135,13 +165,10 @@ const updateTransaction = async (req, res) => {
       description: description || ''
     });
 
-    // Appliquer le nouveau montant sur le solde
-    await Compte.updateSolde(compte.id, montant_total, type);
-
     // Vérifier les règles de notification de budget
-    if (type === 'depense') {
-      await notificationService.checkTransactionRules(utilisateur_id);
-    }
+    // if (type === 'depense') {
+    //   await notificationService.checkTransactionRules(utilisateur_id);
+    // }
 
     res.status(200).json({
       message: 'Transaction modifiée avec succès.'
@@ -152,9 +179,33 @@ const updateTransaction = async (req, res) => {
   }
 };
 
+const getStock = async (req, res) => {
+  try {
+    const utilisateur_id = req.user.id;
+    // We group by produit_service and calculate stock
+    const [rows] = await require('../config/db').execute(
+      `SELECT categorie_id, produit_service, 
+              SUM(CASE WHEN type = 'achat' THEN quantite ELSE 0 END) - 
+              SUM(CASE WHEN type = 'vente' THEN quantite ELSE 0 END) as stockActuel
+       FROM transactions 
+       WHERE utilisateur_id = ? AND (type = 'achat' OR type = 'vente')
+       GROUP BY categorie_id, produit_service
+       HAVING stockActuel >= 0
+       ORDER BY produit_service ASC`,
+      [utilisateur_id]
+    );
+
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Erreur lors de la recup du stock:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur.' });
+  }
+};
+
 module.exports = {
   createTransaction,
   getTransactions,
   deleteTransaction,
-  updateTransaction
+  updateTransaction,
+  getStock
 };

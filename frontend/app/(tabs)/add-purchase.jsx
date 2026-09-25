@@ -36,6 +36,7 @@ export default function AddPurchaseScreen() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
+  const [availableStock, setAvailableStock] = useState([]);
   const [produits, setProduits] = useState([]);
   const [produit, setProduit] = useState('');
   const [showProductPicker, setShowProductPicker] = useState(false);
@@ -60,7 +61,18 @@ export default function AddPurchaseScreen() {
 
   useEffect(() => {
     fetchCategories();
+    fetchStock();
   }, []);
+
+  const fetchStock = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/transactions/stock`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data) setAvailableStock(res.data);
+    } catch (_) {}
+  };
 
   const fetchCategories = async () => {
     try {
@@ -80,21 +92,39 @@ export default function AddPurchaseScreen() {
     setSelectedCategory(cat);
     setShowCategoryPicker(false);
     setProduit('');
-    setProduits(DEMO_PRODUITS[cat.id] || []);
+    
+    // Obtenir uniquement les produits associés à cette catégorie dans l'historique
+    const inStock = availableStock
+      .filter(item => item.categorie_id === cat.id)
+      .map(item => item.produit_service);
+      
+    // Si aucun historique pour cette catégorie, utiliser les démos, sinon utiliser l'historique
+    if (inStock.length > 0) {
+      setProduits(inStock);
+    } else {
+      setProduits(DEMO_PRODUITS[cat.id] || []);
+    }
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (newCategoryName.trim() === '') return;
-    const newCat = {
-      id: Date.now(), // Fake ID for demo
-      nom: newCategoryName,
-      icon: 'tag-outline',
-      color: '#1565C0',
-      bg: '#E3F2FD'
-    };
-    setCategories([newCat, ...categories]);
-    handleSelectCategory(newCat);
-    setNewCategoryName('');
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.post(`${API_URL}/categories`, {
+        nom: newCategoryName,
+        type: 'general',
+        color: '#1565C0',
+        icon: 'tag'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const newCat = res.data.categorie;
+      setCategories([newCat, ...categories]);
+      handleSelectCategory(newCat);
+      setNewCategoryName('');
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de créer la catégorie.');
+    }
   };
 
   const handleSubmit = async () => {
@@ -111,7 +141,7 @@ export default function AddPurchaseScreen() {
       const token = await AsyncStorage.getItem('token');
       const payload = {
         categorie_id:   selectedCategory.id,
-        type:           'depense', // Un achat de stock est une dépense/décaissement
+        type:           'achat',
         produit_service: produit,
         quantite:       quantite.toString(),
         prix_unitaire:  prixUnitaireCalc.toString(),

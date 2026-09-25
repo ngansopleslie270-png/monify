@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
@@ -14,6 +14,8 @@ export default function DashboardScreen() {
   const [stats, setStats] = useState({ totalVentes: 0, totalDepenses: 0, solde: 0 });
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stockModalVisible, setStockModalVisible] = useState(false);
+  const [stockData, setStockData] = useState([]);
   const API_URL = 'http://10.175.14.80:5000/api';
 
   useFocusEffect(
@@ -49,26 +51,87 @@ export default function DashboardScreen() {
     }
   };
 
+  const handleCloturer = async () => {
+    Alert.alert(
+      "Clôture de Caisse",
+      "Êtes-vous sûr de vouloir clôturer la caisse d'aujourd'hui ? Cette action enregistrera le bilan journalier.",
+      [
+        { text: "Annuler", style: "cancel" },
+        { 
+          text: "Confirmer", 
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              const res = await axios.post(`${API_URL}/dashboard/cloture`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              
+              const { solde_final, totalVentes, totalAchats, totalDepenses } = res.data;
+              const reportMessage = 
+                `📊 Rapport de la journée :\n\n` +
+                `📈 Ventes : ${totalVentes.toLocaleString('fr-FR')} FCFA\n` +
+                `📉 Achats : ${totalAchats.toLocaleString('fr-FR')} FCFA\n` +
+                `💸 Dépenses : ${totalDepenses.toLocaleString('fr-FR')} FCFA\n\n` +
+                `💰 Solde Final en Caisse : ${solde_final.toLocaleString('fr-FR')} FCFA`;
+                
+              Alert.alert("Clôture Réussie", reportMessage);
+            } catch (error) {
+              const msg = error.response?.data?.message || 'Erreur lors de la clôture.';
+              Alert.alert("Erreur", msg);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const totalVentes   = stats.totalVentes || 0;
   const totalDepenses = stats.totalDepenses || 0;
-  const totalAchats   = 0; // Si on a un moyen de différencier achat de loyer, sinon 0
+  const totalAchats   = stats.totalAchats || 0;
   const solde         = stats.solde || 0;
-  const totalSorties  = totalDepenses;
+  const totalSorties  = totalDepenses + totalAchats;
+
+  // Calcul marge nette
+  const margeNette = totalVentes - totalSorties;
+  const margePct = totalVentes > 0 ? Math.round((margeNette / totalVentes) * 100) : 0;
+
+  const openStockModal = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/transactions/stock`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStockData(res.data);
+      setStockModalVisible(true);
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de charger le stock.');
+    }
+  };
 
   const getTxIcon = (type) => {
     if (type === 'vente' || type === 'revenu') return { icon: 'arrow-down-left', color: '#2E7D32', bg: '#E8F5E9' };
     return { icon: 'arrow-up-right', color: '#C62828', bg: '#FFEBEE' };
   };
 
-  const depenseCategories = [
-    { label: 'Achats Marchandises (Stock)',    amount: '0 (0%)', pct: 0, color: Colors.primary },
-    { label: 'Loyers & Emplacement',           amount: '0 (0%)', pct: 0, color: '#E53935' },
-    { label: 'Transports & Livraisons',        amount: '0 (0%)',   pct: 0, color: '#FB8C00' },
-    { label: 'Factures & Energie (Eneo, Eau)', amount: '0 (0%)',   pct: 0, color: '#8E24AA' },
-  ];
+  // Traitement dynamique des catégories
+  const rawCategories = stats.sortiesByCategory || [];
+  
+  // Couleurs cycliques pour les catégories
+  const categoryColors = [Colors.primary, '#E53935', '#FB8C00', '#8E24AA', '#00ACC1', '#43A047'];
 
-  // Tableau d'alertes et avertissements (extensible)
-  const alerts = [];
+  const depenseCategories = rawCategories.map((cat, index) => {
+    const total = parseFloat(cat.total) || 0;
+    const pct = totalSorties > 0 ? (total / totalSorties) : 0;
+    return {
+      label: cat.nom || 'Autre',
+      amount: `${total.toLocaleString('fr-FR')} (${Math.round(pct * 100)}%)`,
+      pct: pct,
+      color: categoryColors[index % categoryColors.length]
+    };
+  });
+
+  // Tableau d'alertes et avertissements dynamiques
+  const alerts = stats.alerts || [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -161,15 +224,19 @@ export default function DashboardScreen() {
           </View>
 
           {/* Achats Stock */}
-          <View style={[styles.statBox, styles.statBoxMid]}>
+          <TouchableOpacity 
+            style={[styles.statBox, styles.statBoxMid]} 
+            onPress={openStockModal}
+            activeOpacity={0.7}
+          >
             <View style={[styles.statIcon, { backgroundColor: '#E3F2FD' }]}>
               <MaterialCommunityIcons name="package-variant" size={15} color="#1565C0" />
             </View>
             <Text style={styles.statLabel}>{'ACHATS\nSTOCK'}</Text>
             <Text style={styles.statAmount}>{totalAchats.toLocaleString('fr-FR')}</Text>
-            <Text style={styles.statCurrency}>FCFA (0%)</Text>
-            <Text style={styles.statDesc}>Marchandises</Text>
-          </View>
+            <Text style={styles.statCurrency}>FCFA ({totalSorties > 0 ? Math.round((totalAchats/totalSorties)*100) : 0}%)</Text>
+            <Text style={[styles.statDesc, { color: Colors.primary, fontWeight: '600' }]}>Voir le stock 👀</Text>
+          </TouchableOpacity>
 
           {/* Depenses */}
           <View style={styles.statBox}>
@@ -178,8 +245,8 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.statLabel}>DEPENSES</Text>
             <Text style={styles.statAmount}>{totalDepenses.toLocaleString('fr-FR')}</Text>
-            <Text style={styles.statCurrency}>FCFA (0%)</Text>
-            <Text style={styles.statDesc}>Loyer, cour</Text>
+            <Text style={styles.statCurrency}>FCFA ({totalSorties > 0 ? Math.round((totalDepenses/totalSorties)*100) : 0}%)</Text>
+            <Text style={styles.statDesc}>Loyer, autres</Text>
           </View>
         </View>
 
@@ -190,7 +257,7 @@ export default function DashboardScreen() {
           </Text>
           <View style={styles.variationBadge}>
             <Feather name="minus" size={11} color="#C62828" />
-            <Text style={styles.variationText}> 0%</Text>
+            <Text style={styles.variationText}> -</Text>
           </View>
         </View>
 
@@ -199,8 +266,8 @@ export default function DashboardScreen() {
           <View style={styles.opsSummaryLeft}>
             <MaterialCommunityIcons name="swap-horizontal" size={20} color={Colors.primary} />
             <View style={{ marginLeft: 10 }}>
-              <Text style={styles.opsSummaryTitle}>0 opération ce mois</Text>
-              <Text style={styles.opsSummarySub}>Panier moyen : 0 FCFA</Text>
+              <Text style={styles.opsSummaryTitle}>{stats.nbOperations || 0} opération(s) ce mois</Text>
+              <Text style={styles.opsSummarySub}>Panier moyen : {stats.panierMoyen ? stats.panierMoyen.toLocaleString('fr-FR') : 0} FCFA</Text>
             </View>
           </View>
           <View style={styles.opsDaysBadge}>
@@ -256,15 +323,21 @@ export default function DashboardScreen() {
 
         <View style={styles.depensesCard}>
           <View style={styles.donutRow}>
-            <View style={styles.donutCircle}>
-              <Text style={styles.donutPct}>0%</Text>
+            <View style={[styles.donutCircle, { borderColor: margePct >= 0 ? Colors.primary : '#E53935' }]}>
+              <Text style={[styles.donutPct, { color: margePct >= 0 ? Colors.primary : '#E53935' }]}>
+                {margePct}%
+              </Text>
             </View>
             <View style={{ flex: 1, marginLeft: 14 }}>
               <Text style={styles.donutTitle}>Marge nette actuelle</Text>
-              <Text style={styles.donutSub}>Données insuffisantes</Text>
+              <Text style={styles.donutSub}>
+                {margeNette >= 0 
+                  ? `Bénéfice de ${margeNette.toLocaleString('fr-FR')} FCFA`
+                  : `Perte de ${Math.abs(margeNette).toLocaleString('fr-FR')} FCFA`}
+              </Text>
             </View>
           </View>
-          {depenseCategories.map((cat, i) => (
+          {depenseCategories.length > 0 ? depenseCategories.map((cat, i) => (
             <View key={i} style={styles.catRow}>
               <View style={[styles.catDot, { backgroundColor: cat.color }]} />
               <View style={styles.catInfo}>
@@ -275,7 +348,11 @@ export default function DashboardScreen() {
               </View>
               <Text style={styles.catAmount}>{cat.amount}</Text>
             </View>
-          ))}
+          )) : (
+            <Text style={{ textAlign: 'center', color: Colors.textSecondary, marginTop: 10, fontSize: 12 }}>
+              Aucune dépense ou achat pour le moment.
+            </Text>
+          )}
         </View>
 
         {/* ── Alertes et Avertissements ── */}
@@ -314,12 +391,54 @@ export default function DashboardScreen() {
               <Text style={styles.bilanSub}>Cloture conseillee avant 20h30</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.cloturerBtn}>
+          <TouchableOpacity style={styles.cloturerBtn} onPress={handleCloturer}>
             <Text style={styles.cloturerText}>Cloturer</Text>
           </TouchableOpacity>
         </View>
 
       </ScrollView>
+
+      {/* Modal du Stock */}
+      <Modal visible={stockModalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>État du Stock Actuel</Text>
+              <TouchableOpacity onPress={() => setStockModalVisible(false)}>
+                <Feather name="x" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            
+            {stockData.length === 0 ? (
+              <View style={styles.emptyStockContainer}>
+                <Feather name="package" size={40} color={Colors.textSecondary} />
+                <Text style={styles.emptyStockText}>Votre stock est vide.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={stockData}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({ item }) => (
+                  <View style={styles.stockItemCard}>
+                    <View style={styles.stockItemIcon}>
+                      <Feather name="box" size={18} color="#1565C0" />
+                    </View>
+                    <View style={styles.stockItemInfo}>
+                      <Text style={styles.stockItemName}>{item.produit_service}</Text>
+                      <Text style={styles.stockItemCat}>Catégorie liée</Text>
+                    </View>
+                    <View style={styles.stockItemQtyBox}>
+                      <Text style={styles.stockItemQty}>{item.stockActuel}</Text>
+                      <Text style={styles.stockItemQtyLabel}>En stock</Text>
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -515,4 +634,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10,
   },
   cloturerText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+
+  // Stock Modal Styles
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    height: '75%', padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: Colors.text },
+  emptyStockContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyStockText: { fontSize: 16, color: Colors.textSecondary, marginTop: 10, fontWeight: '600' },
+  stockItemCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.surface, borderRadius: 16,
+    padding: 14, marginBottom: 10, borderWidth: 1, borderColor: Colors.border,
+  },
+  stockItemIcon: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: '#E3F2FD',
+    justifyContent: 'center', alignItems: 'center', marginRight: 14,
+  },
+  stockItemInfo: { flex: 1 },
+  stockItemName: { fontSize: 15, fontWeight: '700', color: Colors.text },
+  stockItemCat: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  stockItemQtyBox: { alignItems: 'flex-end', backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  stockItemQty: { fontSize: 16, fontWeight: '800', color: '#1565C0' },
+  stockItemQtyLabel: { fontSize: 10, color: Colors.textSecondary, fontWeight: '600' },
 });

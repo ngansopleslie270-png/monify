@@ -36,6 +36,7 @@ export default function AddExpenseScreen() {
   const [categories, setCategories] = useState(DEMO_CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const [produits, setProduits] = useState([]);
   const [produit, setProduit] = useState('');
@@ -64,8 +65,7 @@ export default function AddExpenseScreen() {
   const fetchCategories = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      // Idéalement filtrer par type='depense' côté API
-      const res = await axios.get(`${API_URL}/categories?type=depense`, {
+      const res = await axios.get(`${API_URL}/categories`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data && res.data.length > 0) {
@@ -73,6 +73,28 @@ export default function AddExpenseScreen() {
       }
     } catch (_) {
       // Demo fallback si echec API
+    }
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.post(`${API_URL}/categories`, {
+        nom: newCategoryName,
+        type: 'general',
+        color: '#C62828',
+        icon: 'tag'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const newCat = res.data.categorie;
+      setCategories([...categories, newCat]);
+      setSelectedCategory(newCat);
+      setNewCategoryName('');
+      setShowCategoryPicker(false);
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de créer la catégorie.');
     }
   };
 
@@ -326,6 +348,19 @@ export default function AddExpenseScreen() {
                 <Feather name="x" size={20} color={Colors.text} />
               </TouchableOpacity>
             </View>
+
+            <View style={styles.freeInputContainer}>
+              <TextInput 
+                style={styles.freeInput} 
+                placeholder="Créer une nouvelle catégorie..." 
+                value={newCategoryName} 
+                onChangeText={setNewCategoryName} 
+              />
+              <TouchableOpacity style={styles.freeInputBtn} onPress={handleAddCategory}>
+                <Text style={styles.freeInputBtnText}>Ajouter</Text>
+              </TouchableOpacity>
+            </View>
+
             <FlatList
               data={categories}
               keyExtractor={item => item.id.toString()}

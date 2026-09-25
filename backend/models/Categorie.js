@@ -11,6 +11,14 @@ class Categorie {
     return rows;
   }
 
+  static async create({ utilisateur_id, nom, type, color, icon }) {
+    const [result] = await db.execute(
+      'INSERT INTO categories (utilisateur_id, nom, type, color, icon) VALUES (?, ?, ?, ?, ?)',
+      [utilisateur_id || null, nom, type || 'general', color || '#607D8B', icon || 'tag']
+    );
+    return result.insertId;
+  }
+
   static async createDefaultCategories() {
     const count = await this.findAll();
     if (count.length === 0) {

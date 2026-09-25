@@ -26,10 +26,11 @@ const validateLogin = [
 ];
 
 const validateTransaction = [
-  body('type').isIn(['vente', 'depense']).withMessage('Le type doit être "vente" ou "depense"'),
-  body('montant_total').isNumeric().withMessage('Le montant doit être un nombre valide'),
+  body('type').isIn(['vente', 'achat', 'depense', 'revenu']).withMessage('Le type doit être valide'),
+  body('quantite').isNumeric().withMessage('La quantité doit être un nombre valide'),
+  body('prix_unitaire').isNumeric().withMessage('Le prix unitaire doit être un nombre valide'),
   body('produit_service').notEmpty().withMessage('La description du produit/service est requise'),
-  body('categorie_id').isInt().withMessage('L\'ID de catégorie est requis'),
+  body('categorie_id').optional(),
   checkValidation
 ];
 

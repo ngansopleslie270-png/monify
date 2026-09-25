@@ -2,12 +2,11 @@ const db = require('../config/db');
 
 class Transaction {
   static async create({ utilisateur_id, categorie_id, type, produit_service, quantite, prix_unitaire, montant_total, mode_paiement, description }) {
-    const reference = 'TRX-' + Math.floor(Math.random() * 1000000);
     const [result] = await db.execute(
       `INSERT INTO transactions 
-      (reference, utilisateur_id, categorie_id, type, produit_service, quantite, prix_unitaire, montant_total, mode_paiement, description) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [reference, utilisateur_id, categorie_id, type, produit_service, quantite, prix_unitaire, montant_total, mode_paiement, description]
+      (utilisateur_id, categorie_id, type, produit_service, quantite, prix_unitaire, montant_total, mode_paiement, description) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [utilisateur_id, categorie_id, type, produit_service, quantite, prix_unitaire, montant_total, mode_paiement, description]
     );
     return result.insertId;
   }
@@ -72,6 +71,42 @@ class Transaction {
       [utilisateur_id]
     );
     return rows;
+  }
+
+  static async getDashboardMetrics(utilisateur_id) {
+    const [rows] = await db.execute(
+      `SELECT 
+          type, 
+          COUNT(id) as nb_operations, 
+          SUM(montant_total) as total 
+       FROM transactions 
+       WHERE utilisateur_id = ? 
+         AND MONTH(date_operation) = MONTH(CURRENT_DATE()) 
+         AND YEAR(date_operation) = YEAR(CURRENT_DATE())
+       GROUP BY type`,
+      [utilisateur_id]
+    );
+    return rows;
+  }
+
+  static async getProductStock(utilisateur_id, produit_service, exclude_transaction_id = null) {
+    let queryAchats = `SELECT SUM(quantite) as total FROM transactions WHERE utilisateur_id = ? AND type = 'achat' AND produit_service = ?`;
+    let queryVentes = `SELECT SUM(quantite) as total FROM transactions WHERE utilisateur_id = ? AND type = 'vente' AND produit_service = ?`;
+    let params = [utilisateur_id, produit_service];
+
+    if (exclude_transaction_id) {
+      queryAchats += ` AND id != ?`;
+      queryVentes += ` AND id != ?`;
+      params.push(exclude_transaction_id);
+    }
+
+    const [achats] = await db.execute(queryAchats, params);
+    const [ventes] = await db.execute(queryVentes, params);
+
+    const totalA = achats[0]?.total || 0;
+    const totalV = ventes[0]?.total || 0;
+
+    return parseFloat(totalA) - parseFloat(totalV);
   }
 }
 

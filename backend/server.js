@@ -82,7 +82,7 @@ app.use((err, _req, res, _next) => {
 // ─────────────────────────────────────────────
 // Démarrage du serveur
 // ─────────────────────────────────────────────
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('╔══════════════════════════════════════╗');
   console.log('║      🏪  MONIFY API  –  v1.0.0       ║');

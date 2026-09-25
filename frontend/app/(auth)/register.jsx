@@ -23,7 +23,7 @@ export default function RegisterScreen() {
   const [acceptTerms, setAcceptTerms] = useState(false);
 
   // Remplace localhost par l'IP de ton ordinateur
-  const API_URL = 'http://10.175.14.80:5000/api'; 
+  const API_URL = 'http://10.175.14.80:5000/api';
 
   const handleRegister = async () => {
     if (!nom.trim() || !commerce.trim() || !typeActivite.trim() || !email.trim() || !telephone.trim() || !password.trim()) {
@@ -58,8 +58,19 @@ export default function RegisterScreen() {
       }
     } catch (error) {
       console.error(error);
-      const message = error.response?.data?.message || 'Erreur lors de l\'inscription';
-      Alert.alert('Erreur', message);
+      let message = 'Erreur de connexion au serveur.';
+      if (error.response?.data) {
+        if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
+          message = error.response.data.errors.map(e => e.msg || e.message).join('\n');
+        } else if (error.response.data.message) {
+          message = error.response.data.message;
+        } else if (error.response.data.error) {
+          message = error.response.data.error;
+        }
+      } else if (error.message) {
+        message = error.message;
+      }
+      Alert.alert('Échec de l\'inscription', message);
     } finally {
       setLoading(false);
     }

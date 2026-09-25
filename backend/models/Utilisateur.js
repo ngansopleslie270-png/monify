@@ -33,6 +33,14 @@ class Utilisateur {
     return rows[0];
   }
 
+  static async update(id, { nom, commerce, telephone }) {
+    const [result] = await db.execute(
+      'UPDATE utilisateurs SET nom = ?, commerce = ?, telephone = ? WHERE id = ?',
+      [nom, commerce, telephone, id]
+    );
+    return result.affectedRows > 0;
+  }
+
   static async findAll() {
     const [rows] = await db.execute(
       'SELECT id, nom, commerce, type_activite, telephone, email, role, created_at FROM utilisateurs ORDER BY created_at DESC'
