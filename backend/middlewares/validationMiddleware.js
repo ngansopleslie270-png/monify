@@ -10,17 +10,17 @@ const checkValidation = (req, res, next) => {
 };
 
 const validateRegister = [
-  body('nom_complet').notEmpty().withMessage('Le nom complet est requis'),
-  body('nom_commerce').notEmpty().withMessage('Le nom du commerce est requis'),
+  body('nom').notEmpty().withMessage('Le nom complet est requis'),
+  body('commerce').notEmpty().withMessage('Le nom du commerce est requis'),
   body('email').isEmail().withMessage('Adresse email invalide'),
   body('telephone').notEmpty().withMessage('Le numéro de téléphone est requis'),
-  body('mot_de_passe').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères'),
+  body('motDePasse').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères'),
   checkValidation
 ];
 
 const validateLogin = [
-  body('email').notEmpty().withMessage('L\'identifiant est requis'),
-  body('mot_de_passe').notEmpty().withMessage('Le mot de passe est requis'),
+  body('email').isEmail().withMessage('Veuillez fournir une adresse email valide'),
+  body('motDePasse').notEmpty().withMessage('Le mot de passe est requis'),
   checkValidation
 ];
 

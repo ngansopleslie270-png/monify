@@ -10,7 +10,7 @@ import Header from '../../components/Header';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -20,7 +20,7 @@ export default function LoginScreen() {
   const API_URL = 'http://10.175.14.80:5000/api'; 
 
   const handleLogin = async () => {
-    if (!identifier.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim()) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires.');
       return;
     }
@@ -28,7 +28,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const response = await axios.post(`${API_URL}/auth/login`, {
-        identifier,
+        email: email.trim(),
         motDePasse: password
       });
 
@@ -70,15 +70,16 @@ export default function LoginScreen() {
           {/* Form Card */}
           <View style={styles.formCard}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>NOM D'UTILISATEUR OU TÉL <Text style={styles.asterisk}>*</Text></Text>
+              <Text style={styles.label}>ADRESSE EMAIL <Text style={styles.asterisk}>*</Text></Text>
               <View style={styles.inputContainer}>
-                <Feather name="user" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+                <Feather name="mail" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="nom d'utilisateur ou téléphone"
-                  value={identifier}
-                  onChangeText={setIdentifier}
+                  placeholder="votre@email.com"
+                  value={email}
+                  onChangeText={setEmail}
                   autoCapitalize="none"
+                  keyboardType="email-address"
                   placeholderTextColor="rgba(142,142,147,0.45)"
                 />
               </View>

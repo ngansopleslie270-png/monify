@@ -4,16 +4,16 @@ const Utilisateur = require('../models/Utilisateur');
 
 const register = async (req, res) => {
   try {
-    const { nom, email, motDePasse } = req.body;
+    const { nom, commerce, email, telephone, motDePasse } = req.body;
 
-    if (!nom || !email || !motDePasse) {
-      return res.status(400).json({ message: 'Veuillez fournir un nom, un email et un mot de passe.' });
+    if (!nom || !commerce || !email || !telephone || !motDePasse) {
+      return res.status(400).json({ message: 'Veuillez remplir tous les champs obligatoires.' });
     }
 
     // Vérifier si l'utilisateur existe déjà
-    const existingUser = await Utilisateur.findByEmail(email);
+    const existingUser = await Utilisateur.findByEmailOrPhone(email); // Or check both
     if (existingUser) {
-      return res.status(400).json({ message: 'Cet email est déjà utilisé.' });
+      return res.status(400).json({ message: 'Cet email ou ce téléphone est déjà utilisé.' });
     }
 
     // Hacher le mot de passe
@@ -21,11 +21,11 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(motDePasse, salt);
 
     // Créer l'utilisateur
-    const userId = await Utilisateur.create(nom, email, hashedPassword);
+    const userId = await Utilisateur.create(nom, commerce, telephone, email, hashedPassword, 'commerçant');
 
     // Générer le token JWT
     const token = jwt.sign(
-      { id: userId, role: 'utilisateur' },
+      { id: userId, role: 'commerçant' },
       process.env.JWT_SECRET || 'monify_secret_key_123',
       { expiresIn: '7d' }
     );
@@ -33,7 +33,7 @@ const register = async (req, res) => {
     res.status(201).json({
       message: 'Utilisateur créé avec succès.',
       token,
-      utilisateur: { id: userId, nom, email, role: 'utilisateur' }
+      utilisateur: { id: userId, nom, commerce, email, telephone, role: 'commerçant' }
     });
   } catch (error) {
     console.error('Erreur lors de l\'inscription:', error);
@@ -52,13 +52,13 @@ const login = async (req, res) => {
     // Vérifier l'utilisateur
     const user = await Utilisateur.findByEmail(email);
     if (!user) {
-      return res.status(400).json({ message: 'Identifiants invalides.' });
+      return res.status(404).json({ message: 'Aucun compte associé à cette adresse email.' });
     }
 
     // Vérifier le mot de passe
     const isMatch = await bcrypt.compare(motDePasse, user.mot_de_passe);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Identifiants invalides.' });
+      return res.status(401).json({ message: 'Mot de passe incorrect.' });
     }
 
     // Générer le token JWT
@@ -71,7 +71,7 @@ const login = async (req, res) => {
     res.status(200).json({
       message: 'Connexion réussie.',
       token,
-      utilisateur: { id: user.id, nom: user.nom, email: user.email, role: user.role }
+      utilisateur: { id: user.id, nom: user.nom, commerce: user.commerce, email: user.email, telephone: user.telephone, role: user.role }
     });
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
