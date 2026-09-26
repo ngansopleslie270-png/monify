@@ -33,9 +33,15 @@ export default function LoginScreen() {
       });
 
       if (response.data.token) {
+        const user = response.data.utilisateur || response.data.user;
         await AsyncStorage.setItem('token', response.data.token);
-        await AsyncStorage.setItem('user', JSON.stringify(response.data.utilisateur || response.data.user));
-        router.replace('/(tabs)');
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+        
+        if (user.role === 'administrateur') {
+          router.replace('/admin');
+        } else {
+          router.replace('/(tabs)');
+        }
       }
     } catch (error) {
       console.error(error);

@@ -147,6 +147,29 @@ export default function WelcomeScreen() {
     }
   );
 
+  React.useEffect(() => {
+    const trackVisit = async () => {
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        let deviceId = await AsyncStorage.getItem('deviceId');
+        if (!deviceId) {
+          deviceId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          await AsyncStorage.setItem('deviceId', deviceId);
+        }
+        
+        const API_URL = process.env.EXPO_PUBLIC_API_URL;
+        if (API_URL) {
+          fetch(`${API_URL}/health/visit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deviceId })
+          }).catch(err => console.log('Erreur visit:', err));
+        }
+      } catch (err) {}
+    };
+    trackVisit();
+  }, []);
+
   const goToNext = () => {
     if (activeIndex < SLIDES.length - 1) {
       flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });

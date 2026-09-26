@@ -12,5 +12,6 @@ router.get('/stats', adminController.getStats);
 router.get('/users', adminController.getUsers);
 router.put('/users/:id/toggle', adminController.toggleUserStatus);
 router.delete('/users/:id', adminController.deleteUser);
+router.put('/settings', adminController.updateSettings);
 
 module.exports = router;

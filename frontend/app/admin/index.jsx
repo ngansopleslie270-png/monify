@@ -98,7 +98,9 @@ export default function AdminDashboard() {
           <Feather name="arrow-left" size={24} color={Colors.surface} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Espace Administration</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.backBtn}>
+          <Feather name="settings" size={24} color={Colors.surface} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -111,6 +113,11 @@ export default function AdminDashboard() {
               <Feather name="users" size={24} color={Colors.primary} />
               <Text style={styles.statValue}>{stats?.totalUsers || 0}</Text>
               <Text style={styles.statLabel}>Utilisateurs</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Feather name="eye" size={24} color="#00838F" />
+              <Text style={styles.statValue}>{stats?.totalVisiteurs || 0}</Text>
+              <Text style={styles.statLabel}>Visiteurs</Text>
             </View>
             <View style={styles.statCard}>
               <Feather name="layers" size={24} color={Colors.expense} />

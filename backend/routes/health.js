@@ -36,4 +36,19 @@ router.get('/', async (req, res) => {
   res.status(httpStatus).json(response);
 });
 
+const Visiteur = require('../models/Visiteur');
+
+router.post('/visit', async (req, res) => {
+  try {
+    const { deviceId } = req.body;
+    if (deviceId) {
+      await Visiteur.registerVisit(deviceId);
+    }
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Erreur registerVisit:', error);
+    res.status(500).json({ success: false });
+  }
+});
+
 module.exports = router;
