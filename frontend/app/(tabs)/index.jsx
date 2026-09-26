@@ -110,6 +110,7 @@ export default function DashboardScreen() {
 
   const getTxIcon = (type) => {
     if (type === 'vente' || type === 'revenu') return { icon: 'arrow-down-left', color: '#2E7D32', bg: '#E8F5E9' };
+    if (type === 'achat') return { icon: 'box', color: '#1565C0', bg: '#E3F2FD' };
     return { icon: 'arrow-up-right', color: '#C62828', bg: '#FFEBEE' };
   };
 
@@ -217,10 +218,7 @@ export default function DashboardScreen() {
             <Text style={styles.statLabel}>VENTES</Text>
             <Text style={styles.statAmount}>{totalVentes.toLocaleString('fr-FR')}</Text>
             <Text style={styles.statCurrency}>FCFA</Text>
-            <View style={styles.statBadge}>
-              <Feather name="minus" size={10} color="#2E7D32" />
-              <Text style={[styles.statBadgeText, { color: '#2E7D32' }]}> 0%</Text>
-            </View>
+
           </View>
 
           {/* Achats Stock */}
@@ -270,9 +268,7 @@ export default function DashboardScreen() {
               <Text style={styles.opsSummarySub}>Panier moyen : {stats.panierMoyen ? stats.panierMoyen.toLocaleString('fr-FR') : 0} FCFA</Text>
             </View>
           </View>
-          <View style={styles.opsDaysBadge}>
-            <Text style={styles.opsDaysText}>0 auj.</Text>
-          </View>
+
         </View>
 
         {/* ── Transactions recentes ── */}
@@ -388,7 +384,6 @@ export default function DashboardScreen() {
             </View>
             <View style={{ marginLeft: 12 }}>
               <Text style={styles.bilanTitle}>Bilan de fin de journee</Text>
-              <Text style={styles.bilanSub}>Cloture conseillee avant 20h30</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.cloturerBtn} onPress={handleCloturer}>

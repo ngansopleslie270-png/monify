@@ -16,6 +16,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
+  const [success, setSuccess] = useState(false);
+
   // Remplace localhost par l'IP de ton ordinateur
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -26,6 +28,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
+    setSuccess(false);
     try {
       const response = await axios.post(`${API_URL}/auth/login`, {
         email: email.trim(),
@@ -33,21 +36,23 @@ export default function LoginScreen() {
       });
 
       if (response.data.token) {
+        setSuccess(true);
         const user = response.data.utilisateur || response.data.user;
         await AsyncStorage.setItem('token', response.data.token);
         await AsyncStorage.setItem('user', JSON.stringify(user));
         
-        if (user.role === 'administrateur') {
-          router.replace('/admin');
-        } else {
-          router.replace('/(tabs)');
-        }
+        setTimeout(() => {
+          if (user.role === 'administrateur') {
+            router.replace('/admin');
+          } else {
+            router.replace('/(tabs)');
+          }
+        }, 800);
       }
     } catch (error) {
       console.error(error);
       const message = error.response?.data?.message || 'Erreur lors de la connexion';
       Alert.alert('Erreur', message);
-    } finally {
       setLoading(false);
     }
   };
@@ -81,7 +86,7 @@ export default function LoginScreen() {
                 <Feather name="mail" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="votre@email.com"
+                  placeholder="votre nom@gmail.com"
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -122,13 +127,13 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.primaryButton, success && { backgroundColor: '#4CAF50' }]}
               onPress={handleLogin}
-              disabled={loading}
+              disabled={loading || success}
             >
-              <MaterialCommunityIcons name="cash-register" size={20} color={Colors.surface} />
-              <Text style={styles.primaryButtonText}>{loading ? 'Connexion...' : 'Se connecter'}</Text>
-              <Feather name="arrow-right" size={20} color={Colors.surface} />
+              <MaterialCommunityIcons name={success ? "check-circle" : "cash-register"} size={20} color={Colors.surface} />
+              <Text style={styles.primaryButtonText}>{success ? 'Connexion réussie' : loading ? 'Connexion...' : 'Se connecter'}</Text>
+              {!success && <Feather name="arrow-right" size={20} color={Colors.surface} />}
             </TouchableOpacity>
           </View>
 

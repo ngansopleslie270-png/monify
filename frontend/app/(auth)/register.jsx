@@ -142,7 +142,7 @@ export default function RegisterScreen() {
                 <Feather name="mail" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="votre.boutique@gmail.com"
+                  placeholder="votre nom@gmail.com"
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -194,7 +194,7 @@ export default function RegisterScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Confirmer le mot de passe <Text style={styles.asterisk}>*</Text></Text>
               <View style={styles.inputContainer}>
-                <Feather name="shield" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
+                <Feather name="lock" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="••••••••••••"

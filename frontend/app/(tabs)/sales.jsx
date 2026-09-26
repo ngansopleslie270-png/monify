@@ -37,6 +37,10 @@ export default function SalesScreen() {
   const [generating, setGenerating] = useState(false);
   const [expensesByCategory, setExpensesByCategory] = useState([]);
   const [salesByDay, setSalesByDay] = useState({ labels: [], datasets: [{ data: [] }] });
+  
+  // Totals States
+  const [totalVentes, setTotalVentes] = useState(0);
+  const [totalDepenses, setTotalDepenses] = useState(0);
 
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -134,13 +138,16 @@ export default function SalesScreen() {
         rev += montant;
         if (!dayMap[dayStr]) dayMap[dayStr] = 0;
         dayMap[dayStr] += montant;
-      } else if (t.type === 'depense') {
+      } else if (t.type === 'depense' || t.type === 'achat') {
         exp += montant;
         const cat = t.categorie_nom || 'Autre';
         if (!catMap[cat]) catMap[cat] = 0;
         catMap[cat] += montant;
       }
     });
+
+    setTotalVentes(Math.round(rev));
+    setTotalDepenses(Math.round(exp));
 
     const chartColors = ['#FF5722', '#03A9F4', '#8BC34A', '#FFC107', '#3F51B5', '#00BCD4', '#FF9800', '#9E9E9E'];
     const sortedCats = Object.keys(catMap)
@@ -169,6 +176,8 @@ export default function SalesScreen() {
       finalFiltered = finalFiltered.filter(t => t.type === 'vente' || t.type === 'revenu');
     } else if (filterType === 'depense') {
       finalFiltered = finalFiltered.filter(t => t.type === 'depense');
+    } else if (filterType === 'achat') {
+      finalFiltered = finalFiltered.filter(t => t.type === 'achat');
     }
     
     if (searchQuery.trim() !== '') {
@@ -235,8 +244,6 @@ export default function SalesScreen() {
     }
   };
 
-  const totalVentes = filteredTransactions.filter(t => t.type === 'vente' || t.type === 'revenu').reduce((sum, t) => sum + parseFloat(t.montant_total), 0);
-  const totalDepenses = filteredTransactions.filter(t => t.type === 'depense').reduce((sum, t) => sum + parseFloat(t.montant_total), 0);
 
   const displayDateLabel = () => {
     if (timeframe === 'jour') {
@@ -341,25 +348,48 @@ export default function SalesScreen() {
               <TouchableOpacity style={[styles.filterPill, filterType === 'depense' && styles.filterPillActive]} onPress={() => setFilterType('depense')}>
                 <Text style={[styles.filterText, filterType === 'depense' && styles.filterTextActive]}>Dépenses</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.filterPill, filterType === 'achat' && styles.filterPillActive]} onPress={() => setFilterType('achat')}>
+                <Text style={[styles.filterText, filterType === 'achat' && styles.filterTextActive]}>Achats</Text>
+              </TouchableOpacity>
             </ScrollView>
 
             {loading ? (
               <ActivityIndicator size="large" color={Colors.primary} style={{marginTop: 20}} />
             ) : filteredTransactions.length === 0 ? (
-              <Text style={{textAlign: 'center', marginTop: 20, color: Colors.textSecondary}}>Aucune transaction trouvée pour cette période.</Text>
+              <Text style={{textAlign: 'center', marginTop: 20, color: Colors.textSecondary}}>
+                {searchQuery.trim() !== '' ? 'Aucune transaction ne correspond.' : 'Aucune transaction trouvée pour cette période.'}
+              </Text>
             ) : (
               filteredTransactions.map((trx) => {
                 const isVente = trx.type === 'vente' || trx.type === 'revenu';
-                const color = isVente ? Colors.income : Colors.expense;
-                const bg = isVente ? Colors.incomeBg : Colors.expenseBg;
-                const sign = isVente ? '+' : '-';
+                const isAchat = trx.type === 'achat';
+                
+                let color = Colors.expense;
+                let bg = Colors.expenseBg;
+                let sign = '-';
+                let label = 'Dépense';
+                let icon = 'arrow-up-right';
+
+                if (isVente) {
+                  color = Colors.income;
+                  bg = Colors.incomeBg;
+                  sign = '+';
+                  label = 'Vente';
+                  icon = 'arrow-down-left';
+                } else if (isAchat) {
+                  color = '#1565C0';
+                  bg = '#E3F2FD';
+                  sign = '-';
+                  label = 'Achat';
+                  icon = 'box';
+                }
                 
                 return (
                   <View key={trx.id} style={styles.transactionCard}>
                     <View style={styles.trxHeader}>
                       <View style={[styles.trxTypeBadgeIncome, {backgroundColor: bg}]}>
-                        <Feather name={isVente ? "arrow-down-left" : "arrow-up-right"} size={12} color={color} />
-                        <Text style={[styles.trxTypeTextIncome, {color}]}>{isVente ? 'Vente' : 'Dépense'}</Text>
+                        <Feather name={icon} size={12} color={color} />
+                        <Text style={[styles.trxTypeTextIncome, {color}]}>{label}</Text>
                       </View>
                       <View style={styles.trxCategoryBadge}>
                         <Text style={styles.trxCategoryText}>{trx.categorie_nom || 'Non catégorisé'}</Text>

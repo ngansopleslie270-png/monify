@@ -25,15 +25,43 @@ const getDashboardStats = async (req, res) => {
       }
     });
 
+    totalVentes = Math.round(totalVentes);
+    totalAchats = Math.round(totalAchats);
+    totalDepenses = Math.round(totalDepenses);
+
     const solde = totalVentes - totalDepenses - totalAchats;
     const panierMoyen = nbOperations > 0 ? Math.round(totalVentes / nbOperations) : 0;
 
     // 2. Générer des alertes dynamiques
     const alerts = [];
+    const Notification = require('../models/Notification');
+    
+    const checkAndCreateNotification = async (type, message) => {
+      try {
+        const recentNotifs = await Notification.findByUserId(utilisateur_id);
+        const todayStr = new Date().toISOString().split('T')[0];
+        const exists = recentNotifs.some(n => {
+          const notifDate = new Date(n.created_at).toISOString().split('T')[0];
+          return n.type === type && n.message === message && notifDate === todayStr;
+        });
+        if (!exists) {
+          await Notification.create({ utilisateur_id, type, message });
+        }
+      } catch (err) {
+        console.error("Erreur création notification auto:", err);
+      }
+    };
+
     if (totalDepenses > totalVentes && totalVentes > 0) {
-      alerts.push({ id: 1, type: 'danger', icon: 'alert-triangle', text: 'Dépenses critiques', sub: 'Vos dépenses ont dépassé vos revenus ce mois-ci.' });
+      const text = 'Dépenses critiques';
+      const sub = 'Vos dépenses ont dépassé vos revenus ce mois-ci.';
+      alerts.push({ id: 1, type: 'danger', icon: 'alert-triangle', text, sub });
+      await checkAndCreateNotification('alerte', `${text} : ${sub}`);
     } else if (totalDepenses > totalVentes * 0.8) {
-      alerts.push({ id: 2, type: 'warning', icon: 'alert-circle', text: 'Attention au budget', sub: 'Vos dépenses représentent plus de 80% de vos revenus.' });
+      const text = 'Attention au budget';
+      const sub = 'Vos dépenses représentent plus de 80% de vos revenus.';
+      alerts.push({ id: 2, type: 'warning', icon: 'alert-circle', text, sub });
+      await checkAndCreateNotification('alerte', `${text} : ${sub}`);
     }
 
     // 3. Récupérer les dépenses par catégorie
@@ -98,6 +126,10 @@ const cloturerCaisse = async (req, res) => {
         totalDepenses += montant;
       }
     });
+
+    totalVentes = Math.round(totalVentes);
+    totalAchats = Math.round(totalAchats);
+    totalDepenses = Math.round(totalDepenses);
 
     const solde_final = totalVentes - totalAchats - totalDepenses;
 

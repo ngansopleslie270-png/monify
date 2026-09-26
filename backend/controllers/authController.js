@@ -56,7 +56,7 @@ const login = async (req, res) => {
     // Vérifier l'utilisateur
     const user = await Utilisateur.findByEmail(email);
     if (!user) {
-      return res.status(404).json({ message: 'Aucun compte associé à cette adresse email.' });
+      return res.status(404).json({ message: 'Email incorrect.' });
     }
 
     // Vérifier le mot de passe

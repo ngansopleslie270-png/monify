@@ -62,6 +62,8 @@ const getTransactions = async (req, res) => {
       if (s.type === 'vente' || s.type === 'revenu') solde += parseFloat(s.total);
       if (s.type === 'depense' || s.type === 'achat') solde -= parseFloat(s.total);
     });
+    
+    solde = Math.round(solde);
 
     res.status(200).json({
       transactions,
