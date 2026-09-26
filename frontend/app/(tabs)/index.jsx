@@ -16,7 +16,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [stockModalVisible, setStockModalVisible] = useState(false);
   const [stockData, setStockData] = useState([]);
-  const API_URL = 'http://10.175.14.80:5000/api';
+  const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
   useFocusEffect(
     React.useCallback(() => {

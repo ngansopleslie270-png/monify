@@ -57,7 +57,7 @@ export default function AddPurchaseScreen() {
   const [editMode, setEditMode] = useState(false);
   const [currentTransactionId, setCurrentTransactionId] = useState(null);
 
-  const API_URL = 'http://10.175.14.80:5000/api';
+  const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
   useEffect(() => {
     fetchCategories();

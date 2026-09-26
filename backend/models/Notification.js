@@ -4,8 +4,8 @@ class Notification {
   static async createTable() {
     const sql = `
       CREATE TABLE IF NOT EXISTS notifications (
-        id              INT UNSIGNED      NOT NULL AUTO_INCREMENT,
-        utilisateur_id  INT UNSIGNED      NOT NULL,
+        id              INT               NOT NULL AUTO_INCREMENT,
+        utilisateur_id  INT               NOT NULL,
         type            VARCHAR(50)       NOT NULL,
         message         TEXT              NOT NULL,
         lu              TINYINT(1)        NOT NULL DEFAULT 0,

@@ -17,7 +17,7 @@ export default function Header({ title }) {
     try {
       const token = await AsyncStorage.getItem('token');
       if (token) {
-        const response = await axios.get('http://10.175.14.80:5000/api/notifications', {
+        const response = await axios.get('http://10.63.33.80:5000/api/notifications', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUnreadCount(response.data.unreadCount || 0);

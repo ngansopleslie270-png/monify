@@ -13,7 +13,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const router = useRouter();
 
-  const API_URL = 'http://10.175.14.80:5000/api';
+  const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
   useEffect(() => {
     fetchData();

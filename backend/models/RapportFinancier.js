@@ -4,8 +4,8 @@ class RapportFinancier {
   static async createTable() {
     const sql = `
       CREATE TABLE IF NOT EXISTS rapports_financiers (
-        id              INT UNSIGNED      NOT NULL AUTO_INCREMENT,
-        utilisateur_id  INT UNSIGNED      NOT NULL,
+        id              INT               NOT NULL AUTO_INCREMENT,
+        utilisateur_id  INT               NOT NULL,
         periode         VARCHAR(50)       NOT NULL,
         total_ventes    DECIMAL(15,2)     NOT NULL,
         total_depenses  DECIMAL(15,2)     NOT NULL,

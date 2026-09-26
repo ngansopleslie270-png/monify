@@ -17,7 +17,7 @@ export default function CategoriesScreen() {
     actives: 0
   });
   const [loading, setLoading] = useState(true);
-  const API_URL = 'http://10.175.14.80:5000/api';
+  const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
   useFocusEffect(
     React.useCallback(() => {
