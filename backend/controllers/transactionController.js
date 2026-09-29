@@ -6,7 +6,7 @@ const createTransaction = async (req, res) => {
     const { categorie_id, type, produit_service, quantite, prix_unitaire, mode_paiement, description } = req.body;
     const utilisateur_id = req.user.id;
 
-    if (!categorie_id || !type || !produit_service || !quantite || !prix_unitaire) {
+    if (!type || !produit_service || !quantite || !prix_unitaire) {
       return res.status(400).json({ message: 'Veuillez fournir toutes les informations obligatoires.' });
     }
 
@@ -25,7 +25,7 @@ const createTransaction = async (req, res) => {
     // Insérer la transaction
     const transactionId = await Transaction.create({
       utilisateur_id,
-      categorie_id,
+      categorie_id: categorie_id || null,
       type,
       produit_service,
       quantite,
@@ -123,7 +123,7 @@ const updateTransaction = async (req, res) => {
     const { categorie_id, type, produit_service, quantite, prix_unitaire, mode_paiement, description } = req.body;
     const utilisateur_id = req.user.id;
 
-    if (!categorie_id || !type || !produit_service || !quantite || !prix_unitaire) {
+    if (!type || !produit_service || !quantite || !prix_unitaire) {
       return res.status(400).json({ message: 'Veuillez fournir toutes les informations obligatoires.' });
     }
 
@@ -163,7 +163,7 @@ const updateTransaction = async (req, res) => {
 
     // Mettre à jour la transaction
     await Transaction.updateById(id, {
-      categorie_id,
+      categorie_id: categorie_id || null,
       type,
       produit_service,
       quantite,

@@ -108,8 +108,8 @@ export default function AddExpenseScreen() {
   const total = (parseInt(prix) || 0) * quantite;
 
   const handleSubmit = async () => {
-    if (!selectedCategory || !produit || !prix) {
-      Alert.alert('Champ requis', 'Veuillez remplir la catégorie, le motif et le montant.');
+    if (!produit || !prix) {
+      Alert.alert('Champ requis', 'Veuillez remplir le motif et le montant.');
       return;
     }
 
@@ -117,7 +117,7 @@ export default function AddExpenseScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       const payload = {
-        categorie_id:   selectedCategory.id,
+        categorie_id:   selectedCategory?.id || null,
         type:           'depense',
         produit_service: produit,
         quantite:       quantite.toString(),
@@ -227,7 +227,10 @@ export default function AddExpenseScreen() {
 
           {/* ── 1. Categorie (Liste deroulante) ── */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Catégorie de la dépense <Text style={styles.asterisk}>*</Text></Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Catégorie de la dépense</Text>
+              <Text style={styles.labelSub}>Optionnel</Text>
+            </View>
             <TouchableOpacity style={styles.dropdownInput} onPress={() => setShowCategoryPicker(true)}>
               {selectedCategory ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -242,14 +245,11 @@ export default function AddExpenseScreen() {
           </View>
 
           {/* ── 2. Motif / Produit (Liste deroulante ou Saisie) ── */}
-          <View style={[styles.inputGroup, !selectedCategory && { opacity: 0.5 }]}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Motif de la dépense <Text style={styles.asterisk}>*</Text></Text>
             <TouchableOpacity 
               style={styles.dropdownInput} 
-              onPress={() => {
-                if (selectedCategory) setShowProductPicker(true);
-              }}
-              disabled={!selectedCategory}
+              onPress={() => setShowProductPicker(true)}
             >
               <Text style={produit ? styles.inputText : styles.placeholderText}>
                 {produit || 'Sélectionner ou saisir le motif...'}
