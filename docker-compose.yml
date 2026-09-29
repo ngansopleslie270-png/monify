@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: monify_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: your_mysql_password
+      MYSQL_DATABASE: monify_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      # Initialise la base de données avec le fichier schema.sql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  db_data:
