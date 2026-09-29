@@ -7,6 +7,8 @@ import { useFocusEffect } from 'expo-router';
 import Header from '../../components/Header';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 export default function ReportsScreen() {
   const [loading, setLoading] = useState(true);
@@ -17,6 +19,7 @@ export default function ReportsScreen() {
   const [selectedCloture, setSelectedCloture] = useState(null);
   const [dayTransactions, setDayTransactions] = useState([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -89,12 +92,73 @@ export default function ReportsScreen() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      setGenerating(true);
+      const token = await AsyncStorage.getItem('token');
+      const dateStr = new Date(selectedCloture.date_cloture).toISOString().split('T')[0];
+      const fileName = `Cloture_Monify_${dateStr}.pdf`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      const response = await fetch(`${API_URL}/rapports/generate-journalier`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ date: dateStr })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur de génération');
+      }
+
+      const blob = await response.blob();
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64data = reader.result.split(',')[1];
+        await FileSystem.writeAsStringAsync(fileUri, base64data, { encoding: FileSystem.EncodingType.Base64 });
+        
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(fileUri);
+        } else {
+          Alert.alert("Succès", "Rapport téléchargé mais le partage n'est pas disponible sur cet appareil.");
+        }
+        setGenerating(false);
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF journalier:', error);
+      Alert.alert("Erreur", "Impossible de générer le rapport PDF.");
+      setGenerating(false);
+    }
+  };
+
   const renderDetails = () => (
     <View style={styles.detailsContainer}>
-      <TouchableOpacity style={styles.backButton} onPress={() => setSelectedCloture(null)}>
-        <Feather name="arrow-left" size={24} color={Colors.text} />
-        <Text style={styles.backText}>Retour aux rapports</Text>
-      </TouchableOpacity>
+      <View style={styles.detailsTopRow}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setSelectedCloture(null)}>
+          <Feather name="arrow-left" size={24} color={Colors.text} />
+          <Text style={styles.backText}>Retour</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.downloadBtn} 
+          onPress={handleDownloadPDF}
+          disabled={generating}
+        >
+          {generating ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <>
+              <Feather name="download" size={18} color={Colors.primary} />
+              <Text style={styles.downloadBtnText}>Télécharger PDF</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
       
       <View style={styles.detailsHeaderCard}>
         <Text style={styles.detailsDate}>
@@ -131,6 +195,32 @@ export default function ReportsScreen() {
               </Text>
             </View>
           ))}
+        </View>
+      )}
+
+      {selectedCloture.stock_restant && (
+        <View style={{marginTop: 25}}>
+          <Text style={styles.tableTitle}>Stock de marchandises restant</Text>
+          <View style={styles.tableContainer}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableCell, styles.tableHeaderCell, {flex: 2}]}>Produit</Text>
+              <Text style={[styles.tableCell, styles.tableHeaderCell, {flex: 1, textAlign: 'right'}]}>Quantité</Text>
+            </View>
+            {(() => {
+              try {
+                const stock = JSON.parse(selectedCloture.stock_restant);
+                if (!stock || stock.length === 0) return <Text style={[styles.emptyText, {padding: 10}]}>Aucun stock enregistré.</Text>;
+                return stock.map((item, idx) => (
+                  <View key={idx} style={styles.tableRow}>
+                    <Text style={[styles.tableCell, {flex: 2}]}>{item.nom}</Text>
+                    <Text style={[styles.tableCell, {flex: 1, textAlign: 'right', fontWeight: 'bold'}]}>{item.stock}</Text>
+                  </View>
+                ));
+              } catch (e) {
+                return null;
+              }
+            })()}
+          </View>
         </View>
       )}
     </View>
@@ -200,6 +290,10 @@ export default function ReportsScreen() {
                     <View style={styles.clotureStat}>
                       <Text style={styles.statLabel}>Ventes</Text>
                       <Text style={[styles.statValue, {color: Colors.income}]}>{parseFloat(cloture.total_ventes).toLocaleString('fr-FR')}</Text>
+                    </View>
+                    <View style={styles.clotureStat}>
+                      <Text style={styles.statLabel}>Achats</Text>
+                      <Text style={[styles.statValue, {color: '#EF6C00'}]}>{parseFloat(cloture.total_achats || 0).toLocaleString('fr-FR')}</Text>
                     </View>
                     <View style={styles.clotureStat}>
                       <Text style={styles.statLabel}>Dépenses</Text>
@@ -321,16 +415,35 @@ const styles = StyleSheet.create({
   detailsContainer: {
     flex: 1,
   },
+  detailsTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
   },
   backText: {
     fontSize: 16,
     fontWeight: '600',
     color: Colors.text,
     marginLeft: 8,
+  },
+  downloadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  downloadBtnText: {
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 13,
   },
   detailsHeaderCard: {
     backgroundColor: Colors.surface,

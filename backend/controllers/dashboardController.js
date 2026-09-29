@@ -133,11 +133,24 @@ const cloturerCaisse = async (req, res) => {
 
     const solde_final = totalVentes - totalAchats - totalDepenses;
 
-    // 3. Enregistrer la clôture
+    // 3. Récupérer le stock actuel
+    const [stockRows] = await require('../config/db').execute(
+      `SELECT produit_service as nom, 
+              SUM(CASE WHEN type = 'achat' THEN quantite ELSE 0 END) - 
+              SUM(CASE WHEN type = 'vente' THEN quantite ELSE 0 END) as stock
+       FROM transactions 
+       WHERE utilisateur_id = ? AND (type = 'achat' OR type = 'vente')
+       GROUP BY produit_service
+       HAVING stock >= 0`,
+      [utilisateur_id]
+    );
+    const stock_restant = JSON.stringify(stockRows);
+
+    // 4. Enregistrer la clôture
     await require('../config/db').execute(
-      `INSERT INTO caisse_journaliere (utilisateur_id, date_cloture, solde_final, total_ventes, total_depenses) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [utilisateur_id, dateAujourdhui, solde_final, totalVentes, (totalAchats + totalDepenses)]
+      `INSERT INTO caisse_journaliere (utilisateur_id, date_cloture, solde_final, total_ventes, total_achats, total_depenses, stock_restant) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [utilisateur_id, dateAujourdhui, solde_final, totalVentes, totalAchats, totalDepenses, stock_restant]
     );
 
     res.status(201).json({ 

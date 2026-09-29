@@ -8,6 +8,7 @@ router.use(protect);
 
 // POST /api/rapports/generate -> Générer et télécharger le PDF
 router.post('/generate', rapportController.generatePDF);
+router.post('/generate-journalier', rapportController.generatePDFJournalier);
 
 // GET /api/rapports -> Récupérer l'historique des rapports
 router.get('/', rapportController.getHistorique);
