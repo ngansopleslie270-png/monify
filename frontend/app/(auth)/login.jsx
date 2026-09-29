@@ -51,7 +51,18 @@ export default function LoginScreen() {
       }
     } catch (error) {
       console.error(error);
-      const message = error.response?.data?.message || 'Erreur lors de la connexion';
+      let message = 'Erreur lors de la connexion';
+      if (error.response?.data) {
+        if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
+          message = error.response.data.errors.map(e => e.msg || e.message).join('\n');
+        } else if (error.response.data.message) {
+          message = error.response.data.message;
+        } else if (error.response.data.error) {
+          message = error.response.data.error;
+        }
+      } else if (error.message) {
+        message = error.message;
+      }
       Alert.alert('Erreur', message);
       setLoading(false);
     }

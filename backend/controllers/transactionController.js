@@ -53,7 +53,13 @@ const createTransaction = async (req, res) => {
 const getTransactions = async (req, res) => {
   try {
     const utilisateur_id = req.user.id;
-    const transactions = await Transaction.findByUserId(utilisateur_id);
+    const dateQuery = req.query.date;
+    
+    let transactions = await Transaction.findByUserId(utilisateur_id);
+    
+    if (dateQuery) {
+      transactions = transactions.filter(t => new Date(t.date_operation).toISOString().split('T')[0] === dateQuery);
+    }
     
     // Calculer le solde actuel sur la volée
     const stats = await Transaction.getDashboardMetrics(utilisateur_id);

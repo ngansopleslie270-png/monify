@@ -114,7 +114,7 @@ export default function RegisterScreen() {
                 <MaterialCommunityIcons name="storefront" size={18} color={Colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Ex: Épicerie Moderne, Prêt-à-porter..."
+                  placeholder="Ex: GoldenMarket, girlBeauty"
                   value={commerce}
                   onChangeText={setCommerce}
                   placeholderTextColor={Colors.textSecondary}

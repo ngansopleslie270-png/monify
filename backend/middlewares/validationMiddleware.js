@@ -15,13 +15,19 @@ const validateRegister = [
   body('typeActivite').notEmpty().withMessage('Le type d\'activité est requis'),
   body('email').isEmail().withMessage('Adresse email invalide'),
   body('telephone').notEmpty().withMessage('Le numéro de téléphone est requis'),
-  body('motDePasse').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères'),
+  body('motDePasse')
+    .isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères')
+    .matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/)
+    .withMessage('Format invalide : le mot de passe doit contenir des lettres, des chiffres et au moins un caractère spécial (exemple : nom@123)'),
   checkValidation
 ];
 
 const validateLogin = [
   body('email').isEmail().withMessage('Veuillez fournir une adresse email valide'),
-  body('motDePasse').notEmpty().withMessage('Le mot de passe est requis'),
+  body('motDePasse')
+    .notEmpty().withMessage('Le mot de passe est requis')
+    .matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/)
+    .withMessage('Format invalide : le mot de passe doit contenir des lettres, des chiffres et au moins un caractère spécial (exemple : nom@123)'),
   checkValidation
 ];
 

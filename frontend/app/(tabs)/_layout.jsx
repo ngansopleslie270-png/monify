@@ -69,7 +69,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="reports"
         options={{
-          href: null,
+          title: 'Rapports',
+          tabBarIcon: ({ color }) => <Feather name="bar-chart-2" size={20} color={color} />,
         }}
       />
       <Tabs.Screen

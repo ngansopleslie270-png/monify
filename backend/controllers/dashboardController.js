@@ -153,7 +153,22 @@ const cloturerCaisse = async (req, res) => {
   }
 };
 
+const getClotures = async (req, res) => {
+  try {
+    const utilisateur_id = req.user.id;
+    const [rows] = await require('../config/db').execute(
+      `SELECT * FROM caisse_journaliere WHERE utilisateur_id = ? ORDER BY date_cloture DESC`,
+      [utilisateur_id]
+    );
+    res.status(200).json({ clotures: rows });
+  } catch (error) {
+    console.error('Erreur lors du chargement des clotures:', error);
+    res.status(500).json({ message: 'Erreur interne.' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
-  cloturerCaisse
+  cloturerCaisse,
+  getClotures
 };
